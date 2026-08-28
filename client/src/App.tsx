@@ -6,6 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import OperationalPage from "@/pages/OperationalPage";
 import OperationalExtrasPage from "@/pages/OperationalExtrasPage";
+import DiaryPage from "@/pages/DiaryPage";
 import ActionsPage from "@/pages/ActionsPage";
 import OccurrencesPage from "@/pages/OccurrencesPage";
 import SetupPage from "@/pages/SetupPage";
@@ -25,7 +26,7 @@ function AppRouter() {
   if (path === "/") return <StartPage />;
   const content =
     path === "/hoje" ? <Home /> :
-    path === "/diario" ? <OperationalPage mode="diario" /> :
+    path === "/diario" ? <DiaryPage /> :
     path === "/frentes" ? <OperationalExtrasPage mode="frentes" /> :
     path === "/ocorrencias" ? <OccurrencesPage /> :
     path === "/acoes" ? <ActionsPage /> :
