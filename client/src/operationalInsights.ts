@@ -6,7 +6,7 @@ export type AttentionItem = {
   label: string;
   description: string;
   tone: "critical" | "warning" | "neutral";
-  path: "/eventos" | "/diario";
+  path: "/acoes" | "/ocorrencias" | "/diario";
 };
 
 function isoDay(value: Date) {
@@ -41,9 +41,9 @@ export function getOperationalAttention(project: LocalProject, referenceDate = n
   });
 
   return [
-    overdueActions.length > 0 ? { id: "overdue-actions", count: overdueActions.length, label: "Ações vencidas", description: "Replaneje ou conclua os itens com prazo ultrapassado.", tone: "critical", path: "/eventos" } : null,
-    criticalEvents.length > 0 ? { id: "critical-events", count: criticalEvents.length, label: "Eventos críticos", description: "Há impacto crítico que ainda precisa de tratamento.", tone: "critical", path: "/eventos" } : null,
-    upcomingActions.length > 0 ? { id: "upcoming-actions", count: upcomingActions.length, label: "Prazos nos próximos 7 dias", description: "Confira responsáveis e condições para executar no prazo.", tone: "warning", path: "/eventos" } : null,
+    overdueActions.length > 0 ? { id: "overdue-actions", count: overdueActions.length, label: "Ações vencidas", description: "Replaneje ou conclua os itens com prazo ultrapassado.", tone: "critical", path: "/acoes" } : null,
+    criticalEvents.length > 0 ? { id: "critical-events", count: criticalEvents.length, label: "Eventos críticos", description: "Há impacto crítico que ainda precisa de tratamento.", tone: "critical", path: "/ocorrencias" } : null,
+    upcomingActions.length > 0 ? { id: "upcoming-actions", count: upcomingActions.length, label: "Prazos nos próximos 7 dias", description: "Confira responsáveis e condições para executar no prazo.", tone: "warning", path: "/acoes" } : null,
     staleFronts.length > 0 ? { id: "stale-fronts", count: staleFronts.length, label: "Frentes sem atualização", description: "Registre o diário das frentes em andamento sem atualização recente.", tone: "neutral", path: "/diario" } : null,
   ].filter((item): item is AttentionItem => Boolean(item));
 }
