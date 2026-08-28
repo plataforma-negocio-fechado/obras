@@ -25,7 +25,7 @@ function priorityClass(priority: LocalPriority) {
 }
 
 export default function OperationalPage({ mode }: Props) {
-  const { project, addDiary, addEvent, updateDiary, delete Diary, setEventStatus, addAction, updateAction, toggleAction, addService } = useLocalProject();
+  const { project, addDiary, addEvent, updateDiary, deleteDiary, setEventStatus, addAction, updateAction, toggleAction, addService } = useLocalProject();
   const [, navigate] = usePilotLocation();
   const [date, setDate] = useState(today);
   const [frontId, setFrontId] = useState(project.fronts[0]?.id ?? "");
