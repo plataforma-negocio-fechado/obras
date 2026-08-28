@@ -8,7 +8,7 @@ import { useState } from "react";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Hoje", path: "/hoje" },
-  { icon: ClipboardCheck, label: "Diário do dia", path: "/diario" },
+  { icon: ClipboardCheck, label: "Diário de obra", path: "/diario" },
   { icon: PackageCheck, label: "Materiais", path: "/materiais" },
   { icon: Users, label: "Equipe", path: "/equipe" },
   { icon: Wrench, label: "Máquinas", path: "/maquinas" },
