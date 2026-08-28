@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import OperationalPage from "@/pages/OperationalPage";
+import OperationalExtrasPage from "@/pages/OperationalExtrasPage";
 import SetupPage from "@/pages/SetupPage";
 import NotFound from "@/pages/NotFound";
 import BackupPage from "@/pages/BackupPage";
@@ -21,8 +22,36 @@ import { usePilotLocation } from "@/pilotRouting";
 function AppRouter() {
   const [path] = usePilotLocation();
   if (path === "/") return <StartPage />;
-  const content = path === "/hoje" ? <Home /> : path === "/diario" ? <OperationalPage mode="diario" /> : path === "/frentes" ? <OperationalPage mode="frentes" /> : path === "/eventos" ? <OperationalPage mode="eventos" /> : path === "/timeline" ? <OperationalPage mode="timeline" /> : path === "/cadastro" ? <SetupPage /> : path === "/dados" ? <BackupPage /> : path === "/relatorio" ? <WeeklyReportPage /> : path === "/planejamento" ? <PhysicalPlanningPage /> : path === "/evidencias" ? <EvidenceGalleryPage /> : path === "/materiais" ? <MaterialsPage /> : path === "/equipe" ? <TeamPage /> : path === "/maquinas" ? <MachinesPage /> : path === "/preferencias" ? <PreferencesPage /> : <NotFound />;
+
+  const content =
+    path === "/hoje" ? <Home /> :
+    path === "/diario" ? <OperationalPage mode="diario" /> :
+    path === "/frentes" ? <OperationalExtrasPage mode="frentes" /> :
+    path === "/eventos" ? <OperationalExtrasPage mode="eventos" /> :
+    path === "/timeline" ? <OperationalExtrasPage mode="timeline" /> :
+    path === "/cadastro" ? <SetupPage /> :
+    path === "/dados" ? <BackupPage /> :
+    path === "/relatorio" ? <WeeklyReportPage /> :
+    path === "/planejamento" ? <PhysicalPlanningPage /> :
+    path === "/evidencias" ? <EvidenceGalleryPage /> :
+    path === "/materiais" ? <MaterialsPage /> :
+    path === "/equipe" ? <TeamPage /> :
+    path === "/maquinas" ? <MachinesPage /> :
+    path === "/preferencias" ? <PreferencesPage /> :
+    <NotFound />;
+
   return <DashboardLayout>{content}</DashboardLayout>;
 }
 
-export default function App() { return <ErrorBoundary><ThemeProvider defaultTheme="light"><TooltipProvider><Toaster /><AppRouter /></TooltipProvider></ThemeProvider></ErrorBoundary>; }
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="light">
+        <TooltipProvider>
+          <Toaster />
+          <AppRouter />
+        </TooltipProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
