@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocalProject, type LocalAction, type LocalEventStatus, type LocalPriority } from "@/localStore";
+import { useLocalProject, type LocalAction, type LocalDiary, type LocalEventStatus, type LocalPriority } from "@/localStore";
 import { usePilotLocation } from "@/pilotRouting";
 import { compressImageFile } from "@/imageCompression";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowUpRight, Camera, Check, FileImage, FileText, Plus, Save, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpRight, Camera, Check, FileImage, Pencil, Plus, Save, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 
 type Props = { mode: "diario" | "frentes" | "eventos" | "timeline" };
 const Kicker = ({ children }: { children: React.ReactNode }) => <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#71756f]">{children}</p>;
@@ -25,7 +25,7 @@ function priorityClass(priority: LocalPriority) {
 }
 
 export default function OperationalPage({ mode }: Props) {
-  const { project, addDiary, addEvent, setEventStatus, addAction, updateAction, toggleAction, addService } = useLocalProject();
+  const { project, addDiary, addEvent, updateDiary, delete Diary, setEventStatus, addAction, updateAction, toggleAction, addService } = useLocalProject();
   const [, navigate] = usePilotLocation();
   const [date, setDate] = useState(today);
   const [frontId, setFrontId] = useState(project.fronts[0]?.id ?? "");
@@ -41,6 +41,7 @@ export default function OperationalPage({ mode }: Props) {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [serviceDrafts, setServiceDrafts] = useState<Record<string, string>>({});
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
+  const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
   const [actionOwnerDraft, setActionOwnerDraft] = useState("");
   const [actionDueDraft, setActionDueDraft] = useState("");
   const [actionPriorityDraft, setActionPriorityDraft] = useState<LocalPriority>("Alta");
@@ -67,32 +68,105 @@ export default function OperationalPage({ mode }: Props) {
   const filteredFronts = useMemo(() => project.fronts.filter((front) => `${front.name} ${front.code} ${front.detail}`.toLowerCase().includes(query.toLowerCase()) && (statusFilter === "Todos" || front.status === statusFilter)), [project.fronts, query, statusFilter]);
   const filteredEvents = useMemo(() => project.events.filter((event) => `${event.title} ${event.description} ${event.impact} ${event.decision}`.toLowerCase().includes(query.toLowerCase()) && (statusFilter === "Todos" || event.status === statusFilter)), [project.events, query, statusFilter]);
 
-  const saveDiary = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!summary.trim()) { toast.error("Descreva o que aconteceu no dia"); return; }
-    if (!frontId) { toast.error("Selecione uma frente de serviço"); return; }
-    const numericProduction = Math.max(0, Number(production) || 0);
-    let evidenceDataUrl: string | undefined;
-    let evidenceType: string | undefined;
-    if (evidence) {
-      try {
-        const photo = await compressImageFile(evidence);
-        evidenceDataUrl = photo.dataUrl;
-        evidenceType = photo.type;
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Não foi possível anexar a foto");
-        return;
-      }
-    }
-    try {
-      addDiary({ date: new Date(`${date}T12:00:00`).toISOString(), frontId, service: service.trim() || selectedFront?.name || "Serviço não informado", summary: summary.trim(), occurrence: occurrence.trim(), weather: weather.trim() || "Não informado", workforce: Math.max(0, Number(workforce) || 0), hours: Math.max(0, Number(hours) || 0), production: numericProduction, evidenceName: evidence?.name, evidenceDataUrl, evidenceType });
-      setSummary(""); setOccurrence(""); setService(""); setProduction("0"); setEvidence(null);
-      toast.success("Diário salvo neste navegador");
-    } catch {
-      toast.error("O diário não pôde ser salvo. Tente uma foto menor ou remova o anexo.");
-    }
-  };
+  const beginEditDiary = (diary: LocalDiary) => {
+  setEditingDiaryId(diary.id);
 
+  setDate(diary.date.slice(0, 10));
+  setFrontId(diary.frontId);
+  setService(diary.service);
+  setSummary(diary.summary);
+  setOccurrence(diary.occurrence);
+  setWeather(diary.weather);
+  setWorkforce(String(diary.workforce));
+  setHours(String(diary.hours));
+  setProduction(String(diary.production));
+
+  setEvidence(null);
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
+  
+  const saveDiary = async (
+  event: React.FormEvent<HTMLFormElement>
+) => {
+  event.preventDefault();
+
+  if (!summary.trim()) {
+    toast.error("Descreva o que aconteceu no dia");
+    return;
+  }
+
+  if (!frontId) {
+    toast.error("Selecione uma frente de serviço");
+    return;
+  }
+
+  const numericProduction = Math.max(
+    0,
+    Number(production) || 0
+  );
+
+  let evidenceDataUrl: string | undefined;
+  let evidenceType: string | undefined;
+
+  if (evidence) {
+    try {
+      const photo = await compressImageFile(evidence);
+      evidenceDataUrl = photo.dataUrl;
+      evidenceType = photo.type;
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível anexar a foto"
+      );
+      return;
+    }
+  }
+
+  try {
+    const diaryData = {
+      date: new Date(`${date}T12:00:00`).toISOString(),
+      frontId,
+      service:
+        service.trim() ||
+        selectedFront?.name ||
+        "Serviço não informado",
+      summary: summary.trim(),
+      occurrence: occurrence.trim(),
+      weather: weather.trim() || "Não informado",
+      workforce: Math.max(0, Number(workforce) || 0),
+      hours: Math.max(0, Number(hours) || 0),
+      production: numericProduction,
+      evidenceName: evidence?.name,
+      evidenceDataUrl,
+      evidenceType,
+    };
+
+    if (editingDiaryId) {
+      updateDiary(editingDiaryId, diaryData);
+      toast.success("Diário atualizado");
+    } else {
+      addDiary(diaryData);
+      toast.success("Diário salvo");
+    }
+
+    setEditingDiaryId(null);
+    setSummary("");
+    setOccurrence("");
+    setService("");
+    setProduction("0");
+    setEvidence(null);
+  } catch {
+    toast.error(
+      "O diário não pôde ser salvo. Tente uma foto menor ou remova o anexo."
+    );
+  }
+};  
+  
   const saveEvent = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!eventTitle.trim() || !eventDescription.trim()) { toast.error("Informe o título e a descrição do evento"); return; }
@@ -121,17 +195,493 @@ export default function OperationalPage({ mode }: Props) {
     setActionTitle(""); setActionOwner(""); setActionDue(""); toast.success("Ação adicionada ao plano");
   };
 
-  if (mode === "diario") return <div className="min-h-screen bg-[#ececea] px-4 py-8 sm:px-8 lg:px-12"><div className="mx-auto max-w-5xl"><Kicker>Projeto Piloto · Jardim Planalto</Kicker><h1 className="mt-3 text-5xl font-black uppercase tracking-[-0.08em]">Registrar o dia</h1><p className="mt-3 max-w-2xl text-sm text-[#70756e]">Preencha o essencial do RDO. O lançamento fica salvo neste navegador, sem login ou configuração de servidor.</p><form onSubmit={saveDiary}><Card className="mt-8 rounded-none border-0 bg-[#f6f6f3] shadow-[6px_6px_0_#d0d1cb]"><CardContent className="grid gap-5 p-6 sm:grid-cols-2"><div><Kicker>Data do registro</Kicker><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-2 border-black/10 bg-white" /></div><div><Kicker>Frente de serviço</Kicker><select value={frontId} onChange={(e) => { setFrontId(e.target.value); setService(""); }} className="mt-2 h-11 w-full border border-black/10 bg-white px-3 text-base sm:h-10 sm:text-sm"><option value="" disabled>Selecione uma frente</option>{project.fronts.map((front) => <option key={front.id} value={front.id}>{front.code} · {front.name}</option>)}</select></div><div className="sm:col-span-2"><Kicker>Serviço executado</Kicker><Input list="services-for-diary" value={service} onChange={(e) => setService(e.target.value)} placeholder="Ex.: escavação, assentamento, reaterro..." className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm" /><datalist id="services-for-diary">{selectedFront?.services.map((item) => <option key={item} value={item} />)}</datalist></div><div className="sm:col-span-2"><Kicker>Atividade principal *</Kicker><Textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Ex.: executada escavação no trecho DRN-01..." className="mt-2 min-h-32 border-black/10 bg-white text-base sm:min-h-28 sm:text-sm" /></div><div><Kicker>Condições / clima</Kicker><Input value={weather} onChange={(e) => setWeather(e.target.value)} placeholder="Ex.: tempo nublado, solo saturado" className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm" /></div><div><Kicker>Equipe no campo</Kicker><Input type="number" inputMode="numeric" min="0" value={workforce} onChange={(e) => setWorkforce(e.target.value)} className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm" /></div><div><Kicker>Horas trabalhadas</Kicker><Input type="number" inputMode="decimal" min="0" step="0.5" value={hours} onChange={(e) => setHours(e.target.value)} className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm" /></div><div><Kicker>Produção do dia · {selectedFront?.unit ?? "un"}</Kicker><Input type="number" inputMode="decimal" min="0" step="0.01" value={production} onChange={(e) => setProduction(e.target.value)} className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm" /></div><div className="sm:col-span-2"><Kicker>Ocorrência de campo</Kicker><Textarea value={occurrence} onChange={(e) => setOccurrence(e.target.value)} placeholder="Registre impedimentos, decisões ou observações..." className="mt-2 min-h-28 border-black/10 bg-white text-base sm:min-h-24 sm:text-sm" /></div><div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap sm:items-center"><label className="inline-flex h-11 max-w-full cursor-pointer items-center gap-2 border border-black/10 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.1em]"><Camera className="h-4 w-4 shrink-0" /><span className="truncate">{evidence ? evidence.name : "Tirar / anexar foto"}</span><input aria-label="Evidência fotográfica" type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setEvidence(e.target.files?.[0] || null)} /></label>{evidence && <Button type="button" variant="ghost" size="sm" onClick={() => setEvidence(null)} className="h-11 text-[#b84f42]"><X className="mr-1 h-4 w-4" />Remover</Button>}<Button type="submit" className="h-12 bg-[#202321] text-white sm:ml-auto"><Save className="mr-2 h-4 w-4" />Salvar diário</Button></div><p className="text-xs leading-5 text-[#70756e] sm:col-span-2"><FileImage className="mr-1 inline h-3.5 w-3.5" />No celular, o botão de foto prioriza a câmera traseira quando o navegador oferecer esse recurso. A imagem será compactada e guardada neste navegador.</p></CardContent></Card></form><div className="mt-8 space-y-3">{project.diaries.length === 0 && <Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5 text-sm text-[#70756e]">Nenhum diário registrado ainda. Faça o primeiro lançamento acima.</CardContent></Card>}{project.diaries.map((item) => <Card key={item.id} className="rounded-none border-0 bg-[#f6f6f3] shadow-[4px_4px_0_#d0d1cb]"><CardContent className="p-5"><div className="flex flex-wrap items-center justify-between gap-3"><Kicker>{formatDate(item.date)} · {item.service}</Kicker>{item.evidenceDataUrl ? <a href={item.evidenceDataUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#789249] hover:underline"><FileImage className="h-3.5 w-3.5" />Ver foto</a> : item.evidenceName && <Badge variant="outline"><FileText className="mr-1 h-3 w-3" /> evidência</Badge>}</div><p className="mt-3 text-sm leading-6">{item.summary}</p>{item.occurrence && <p className="mt-2 text-xs text-[#70756e]">Ocorrência: {item.occurrence}</p>}<p className="mt-3 text-[10px] uppercase tracking-[0.12em] text-[#858a82]">{item.weather} · {item.workforce} pessoas · {item.hours}h · +{item.production} {project.fronts.find((front) => front.id === item.frontId)?.unit ?? "un"}</p></CardContent></Card>)}</div></div></div>;
+  if (mode === "diario")
+  return (
+    <div className="min-h-screen bg-[#ececea] px-4 py-8 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-5xl">
+        <Kicker>Projeto Piloto · Jardim Planalto</Kicker>
 
-  if (mode === "frentes") return <div className="min-h-screen bg-[#ececea] px-4 py-8 sm:px-8 lg:px-12"><div className="mx-auto max-w-6xl"><Kicker>Leitura operacional</Kicker><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="mt-3 text-5xl font-black uppercase tracking-[-0.08em]">Frentes e produção</h1><p className="mt-3 max-w-2xl text-sm text-[#70756e]">Acompanhe planejado versus realizado. A produção lançada no diário atualiza estes números automaticamente.</p></div><Button onClick={() => navigate("/diario")} className="bg-[#202321] text-xs uppercase tracking-[0.1em] text-white"><Plus className="mr-2 h-4 w-4" />Lançar produção</Button></div><div className="mt-8 grid gap-3 sm:grid-cols-3"><Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5"><Kicker>Frentes ativas</Kicker><p className="mt-2 text-3xl font-black">{project.fronts.filter((front) => front.progress > 0 && front.progress < 100).length}</p></CardContent></Card><Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5"><Kicker>Produção acumulada</Kicker><p className="mt-2 text-3xl font-black">{project.fronts.reduce((sum, front) => sum + front.executed, 0).toFixed(2)}</p></CardContent></Card><Card className="rounded-none border-0 bg-[#202321] text-white"><CardContent className="p-5"><Kicker>Registros de produção</Kicker><p className="mt-2 text-3xl font-black text-[#b8d36a]">{project.diaries.filter((diary) => diary.production > 0).length}</p></CardContent></Card></div><div className="mt-8 flex flex-wrap gap-2"><div className="relative min-w-[240px] flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#858a82]" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar frente ou código" className="border-black/10 bg-white pl-9" /></div><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 border border-black/10 bg-white px-3 text-sm"><option>Todos</option>{Array.from(new Set(project.fronts.map((front) => front.status))).map((status) => <option key={status}>{status}</option>)}</select></div><div className="mt-6 grid gap-4 md:grid-cols-2">{filteredFronts.map((front) => <Card key={front.id} className="rounded-none border-0 bg-[#f6f6f3] shadow-[5px_5px_0_#d0d1cb]"><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><Kicker>{front.code}</Kicker><h2 className="mt-1 text-xl font-black uppercase">{front.name}</h2></div><span className="text-3xl font-black">{front.progress}%</span></div><div className="mt-5 h-2 bg-[#dedfda]"><div className="h-full bg-[#8da65a] transition-all" style={{ width: `${front.progress}%` }} /></div><div className="mt-4 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em]"><span>{front.status}</span><span>{front.executed} / {front.planned} {front.unit}</span></div><p className="mt-3 text-sm text-[#70756e]">{front.detail}</p><div className="mt-5 border-t border-black/10 pt-4"><Kicker>Serviços acompanhados</Kicker><div className="mt-2 flex flex-wrap gap-1.5">{front.services.length ? front.services.map((item) => <span key={item} className="bg-[#e8e9e4] px-2 py-1 text-[10px] font-semibold">{item}</span>) : <span className="text-xs text-[#858a82]">Nenhum serviço cadastrado</span>}</div><div className="mt-3 flex gap-2"><Input value={serviceDrafts[front.id] ?? ""} onChange={(e) => setServiceDrafts((current) => ({ ...current, [front.id]: e.target.value }))} placeholder="Adicionar serviço" className="h-9 border-black/10 bg-white text-xs" /><Button type="button" size="sm" onClick={() => { const value = serviceDrafts[front.id]?.trim(); if (!value) return; addService(front.id, value); setServiceDrafts((current) => ({ ...current, [front.id]: "" })); toast.success("Serviço adicionado à frente"); }} className="h-9 shrink-0 bg-[#202321] text-white"><Plus className="h-3.5 w-3.5" /></Button></div></div></CardContent></Card>)}</div>{filteredFronts.length === 0 && <Card className="mt-4 rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5 text-sm text-[#70756e]">Nenhuma frente corresponde aos filtros atuais.</CardContent></Card>}</div></div>;
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-5xl font-black uppercase tracking-[-0.08em]">
+              Diário de obra
+            </h1>
 
-  if (mode === "eventos") return <div className="min-h-screen bg-[#ececea] px-4 py-8 sm:px-8 lg:px-12"><div className="mx-auto max-w-6xl"><Kicker>Risco, decisão e execução</Kicker><h1 className="mt-3 text-5xl font-black uppercase tracking-[-0.08em]">Eventos e ações</h1><p className="mt-3 max-w-2xl text-sm text-[#70756e]">Registre um fato, explicite o impacto e transforme a decisão em ação acompanhável.</p><div className="mt-8 grid gap-5 lg:grid-cols-2"><Card className="rounded-none border-0 bg-[#202321] text-white shadow-[5px_5px_0_#c7c9c2]"><CardContent className="p-6"><Kicker>Novo evento</Kicker><form onSubmit={saveEvent} className="mt-4 space-y-3"><Input value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} placeholder="Título do evento" className="border-white/15 bg-white/10 text-white placeholder:text-white/35" /><Textarea value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} placeholder="O que foi observado?" className="border-white/15 bg-white/10 text-white placeholder:text-white/35" /><div className="grid gap-3 sm:grid-cols-2"><Input value={eventImpact} onChange={(e) => setEventImpact(e.target.value)} placeholder="Impacto na obra" className="border-white/15 bg-white/10 text-white placeholder:text-white/35" /><select value={eventPriority} onChange={(e) => setEventPriority(e.target.value as LocalPriority)} className="h-10 border border-white/15 bg-[#363a36] px-3 text-sm text-white">{priorities.map((item) => <option key={item}>{item}</option>)}</select></div><Textarea value={eventDecision} onChange={(e) => setEventDecision(e.target.value)} placeholder="Decisão ou encaminhamento" className="border-white/15 bg-white/10 text-white placeholder:text-white/35" /><select value={eventFrontId} onChange={(e) => setEventFrontId(e.target.value)} className="h-10 w-full border border-white/15 bg-[#363a36] px-3 text-sm text-white"><option value="">Sem frente vinculada</option>{project.fronts.map((front) => <option key={front.id} value={front.id}>{front.code} · {front.name}</option>)}</select><Button type="submit" className="w-full bg-[#b8d36a] text-[#202321] hover:bg-[#c9e27c]"><Plus className="mr-2 h-4 w-4" />Registrar evento</Button></form></CardContent></Card><Card className="rounded-none border-0 bg-[#f6f6f3] shadow-[5px_5px_0_#d0d1cb]"><CardContent className="p-6"><Kicker>Nova ação</Kicker><form onSubmit={saveAction} className="mt-4 space-y-3"><Input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} placeholder="O que precisa ser feito?" className="border-black/10 bg-white" /><div className="grid gap-3 sm:grid-cols-2"><Input value={actionOwner} onChange={(e) => setActionOwner(e.target.value)} placeholder="Responsável" className="border-black/10 bg-white" /><Input type="date" value={actionDue} onChange={(e) => setActionDue(e.target.value)} className="border-black/10 bg-white" /></div><div className="grid gap-3 sm:grid-cols-2"><select value={actionPriority} onChange={(e) => setActionPriority(e.target.value as LocalPriority)} className="h-10 border border-black/10 bg-white px-3 text-sm">{priorities.map((item) => <option key={item}>{item}</option>)}</select><select value={actionFrontId} onChange={(e) => setActionFrontId(e.target.value)} className="h-10 border border-black/10 bg-white px-3 text-sm"><option value="">Sem frente vinculada</option>{project.fronts.map((front) => <option key={front.id} value={front.id}>{front.code} · {front.name}</option>)}</select></div><select value={actionEventId} onChange={(e) => setActionEventId(e.target.value)} className="h-10 w-full border border-black/10 bg-white px-3 text-sm"><option value="">Sem evento vinculado</option>{project.events.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select><Button type="submit" className="w-full bg-[#202321] text-white"><Plus className="mr-2 h-4 w-4" />Adicionar ao plano</Button></form></CardContent></Card></div><div className="mt-8 grid gap-8 lg:grid-cols-[1.1fr_.9fr]"><section><div className="flex flex-wrap items-center justify-between gap-3"><div><Kicker>Eventos registrados</Kicker><h2 className="mt-1 text-xl font-black uppercase">Contexto e decisão</h2></div><div className="flex gap-2"><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar" className="h-9 w-40 border-black/10 bg-white text-xs" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 border border-black/10 bg-white px-2 text-xs"><option>Todos</option>{eventStatuses.map((item) => <option key={item}>{item}</option>)}</select></div></div><div className="mt-4 space-y-3">{filteredEvents.map((item) => <Card key={item.id} className="rounded-none border-0 border-l-4 border-l-[#d89b45] bg-[#f6f6f3] shadow-[4px_4px_0_#d0d1cb]"><CardContent className="p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><Kicker>{formatDate(item.date, true)} · {project.fronts.find((front) => front.id === item.frontId)?.code ?? "GERAL"}</Kicker><h3 className="mt-2 text-lg font-black uppercase">{item.title}</h3></div><span className={`px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${priorityClass(item.priority)}`}>{item.priority}</span></div><p className="mt-3 text-sm leading-6 text-[#70756e]">{item.description}</p><div className="mt-4 grid gap-3 text-xs sm:grid-cols-2"><div><Kicker>Impacto</Kicker><p className="mt-1">{item.impact}</p></div><div><Kicker>Decisão</Kicker><p className="mt-1">{item.decision}</p></div></div><div className="mt-4 flex flex-wrap gap-2 border-t border-black/10 pt-4">{eventStatuses.map((status) => <Button key={status} type="button" size="sm" variant={item.status === status ? "default" : "outline"} onClick={() => { setEventStatus(item.id, status); toast.success(`Evento marcado como ${status.toLowerCase()}`); }} className={`h-8 rounded-none text-[10px] uppercase tracking-[0.08em] ${item.status === status ? "bg-[#202321] text-white" : "border-black/10 bg-transparent"}`}>{status}</Button>)}</div></CardContent></Card>)}{filteredEvents.length === 0 && <Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5 text-sm text-[#70756e]">Nenhum evento corresponde aos filtros atuais.</CardContent></Card>}</div></section><section><div className="flex items-end justify-between"><div><Kicker>Plano de ação</Kicker><h2 className="mt-1 text-xl font-black uppercase">Execução</h2></div><Badge className="rounded-none bg-[#c95a4a] px-2 py-1 text-[9px] uppercase tracking-[0.14em] text-white">{project.actions.filter((action) => !action.done).length} abertas</Badge></div><div className="mt-4 space-y-2">{filteredActions.map((action) => <div key={action.id} className="border-l-4 border-[#d89b45] bg-[#202321] text-white shadow-[4px_4px_0_#c7c9c2]"><div className="flex items-center gap-3 p-4"><button type="button" aria-label={action.done ? "Reabrir ação" : "Concluir ação"} onClick={() => { toggleAction(action.id); toast.success(action.done ? "Ação reaberta" : "Ação concluída"); }} className={`grid h-6 w-6 shrink-0 place-items-center border ${action.done ? "border-[#b8d36a] bg-[#b8d36a] text-[#202321]" : "border-white/25"}`}>{action.done && <Check className="h-4 w-4" />}</button><div className={`min-w-0 flex-1 text-sm font-semibold ${action.done ? "line-through opacity-50" : ""}`}>{action.title}<span className="mt-1 block text-[10px] font-normal uppercase tracking-[0.1em] text-white/40">{action.owner} · {action.due} · {action.priority}</span></div><button type="button" aria-label={`Editar ${action.title}`} onClick={() => beginEditAction(action)} className="grid h-8 w-8 shrink-0 place-items-center text-white/45 transition hover:bg-white/10 hover:text-[#b8d36a]"><SlidersHorizontal className="h-4 w-4" /></button></div>{editingActionId === action.id && <div className="grid gap-2 border-t border-white/10 p-4 pt-3 sm:grid-cols-[1.2fr_.8fr_.7fr_auto]"><Input value={actionOwnerDraft} onChange={(event) => setActionOwnerDraft(event.target.value)} placeholder="Responsável" className="border-white/15 bg-white/10 text-white placeholder:text-white/35" /><Input type="date" value={actionDueDraft} onChange={(event) => setActionDueDraft(event.target.value)} className="border-white/15 bg-white/10 text-white" /><select value={actionPriorityDraft} onChange={(event) => setActionPriorityDraft(event.target.value as LocalPriority)} className="h-10 border border-white/15 bg-[#363a36] px-3 text-sm text-white">{priorities.map((item) => <option key={item}>{item}</option>)}</select><div className="flex gap-2"><Button type="button" size="sm" onClick={(event) => saveActionEdit(event, action)} className="bg-[#b8d36a] text-[#202321]">Salvar</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditingActionId(null)} className="text-white/60 hover:bg-white/10 hover:text-white">Cancelar</Button></div></div>}</div>)}{filteredActions.length === 0 && <Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5 text-sm text-[#70756e]">Nenhuma ação corresponde aos filtros atuais.</CardContent></Card>}</div></section></div></div></div>;
+            <p className="mt-3 max-w-2xl text-sm text-[#70756e]">
+              Registre, consulte, altere ou exclua os acontecimentos da obra.
+            </p>
+          </div>
 
-  const timeline = [
-    ...project.diaries.map((diary) => ({ id: diary.id, date: diary.date, label: "Diário registrado", text: `${diary.service}: ${diary.summary}`, meta: `${diary.production} ${project.fronts.find((front) => front.id === diary.frontId)?.unit ?? "un"}`, color: "bg-[#8da65a]" })),
-    ...project.events.map((event) => ({ id: event.id, date: event.date, label: `Evento · ${event.status}`, text: `${event.title}: ${event.impact}`, meta: event.priority, color: "bg-[#d89b45]" })),
-    ...project.actions.map((action) => ({ id: action.id, date: action.due !== "A definir" ? `${action.due}T12:00:00` : "1970-01-01T00:00:00", label: action.done ? "Ação concluída" : "Ação aberta", text: action.title, meta: `${action.owner} · ${action.priority}`, color: action.done ? "bg-[#b8d36a]" : "bg-[#c95a4a]" })),
-  ].filter((item) => `${item.label} ${item.text} ${item.meta}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => b.date.localeCompare(a.date));
+          <Badge className="rounded-none bg-[#202321] px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-white">
+            {project.diaries.length} registros
+          </Badge>
+        </div>
 
-  return <div className="min-h-screen bg-[#ececea] px-4 py-8 sm:px-8 lg:px-12"><div className="mx-auto max-w-5xl"><Kicker>Estado vivo da obra</Kicker><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="mt-3 text-5xl font-black uppercase tracking-[-0.08em]">Linha do tempo</h1><p className="mt-3 max-w-2xl text-sm text-[#70756e]">Uma leitura única dos diários, eventos e ações do Jardim Planalto.</p></div><div className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-[#858a82]" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar na timeline" className="h-9 w-48 border-black/10 bg-white text-xs" /></div></div><div className="mt-8 space-y-3">{timeline.map((item) => <Card key={`${item.label}-${item.id}`} className="rounded-none border-0 bg-[#f6f6f3] shadow-[4px_4px_0_#d0d1cb]"><CardContent className="flex gap-4 p-5"><div className={`mt-1 h-3 w-3 shrink-0 rounded-full ${item.color}`} /><div className="min-w-0"><Kicker>{item.date.startsWith("1970") ? "Sem prazo" : formatDate(item.date, true)} · {item.label}</Kicker><p className="mt-2 text-sm leading-6">{item.text}</p><p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-[#858a82]">{item.meta}</p></div></CardContent></Card>)}{timeline.length === 0 && <Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-5 text-sm text-[#70756e]">Nenhum registro corresponde à busca.</CardContent></Card>}</div></div></div>;
-}
+        <form onSubmit={saveDiary}>
+          <Card className="mt-8 rounded-none border-0 bg-[#f6f6f3] shadow-[6px_6px_0_#d0d1cb]">
+            <CardContent className="grid gap-5 p-6 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                {editingDiaryId && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-[#d89b45] bg-[#ececea] p-4">
+                    <div>
+                      <Kicker>Modo de edição</Kicker>
+
+                      <p className="mt-1 text-sm font-semibold">
+                        Você está alterando um diário já registrado.
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingDiaryId(null);
+                        setDate(today());
+                        setFrontId(project.fronts[0]?.id ?? "");
+                        setService("");
+                        setSummary("");
+                        setOccurrence("");
+                        setWeather("");
+                        setWorkforce("0");
+                        setHours("0");
+                        setProduction("0");
+                        setEvidence(null);
+                      }}
+                    >
+                      <X className="mr-1 h-4 w-4" />
+                      Cancelar edição
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Kicker>Data do registro</Kicker>
+
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="mt-2 border-black/10 bg-white"
+                />
+              </div>
+
+              <div>
+                <Kicker>Frente de serviço</Kicker>
+
+                <select
+                  value={frontId}
+                  onChange={(e) => {
+                    setFrontId(e.target.value);
+                    setService("");
+                  }}
+                  className="mt-2 h-11 w-full border border-black/10 bg-white px-3 text-base sm:h-10 sm:text-sm"
+                >
+                  <option value="" disabled>
+                    Selecione uma frente
+                  </option>
+
+                  {project.fronts.map((front) => (
+                    <option key={front.id} value={front.id}>
+                      {front.code} · {front.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <Kicker>Serviço executado</Kicker>
+
+                <Input
+                  list="services-for-diary"
+                  value={service}
+                  onChange={(e) => setService(e.target.value)}
+                  placeholder="Ex.: escavação, assentamento, reaterro..."
+                  className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm"
+                />
+
+                <datalist id="services-for-diary">
+                  {selectedFront?.services.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="sm:col-span-2">
+                <Kicker>Atividade principal *</Kicker>
+
+                <Textarea
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  placeholder="Ex.: executada escavação no trecho DRN-01..."
+                  className="mt-2 min-h-32 border-black/10 bg-white text-base sm:min-h-28 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <Kicker>Condições / clima</Kicker>
+
+                <Input
+                  value={weather}
+                  onChange={(e) => setWeather(e.target.value)}
+                  placeholder="Ex.: tempo nublado, solo saturado"
+                  className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <Kicker>Equipe no campo</Kicker>
+
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  value={workforce}
+                  onChange={(e) => setWorkforce(e.target.value)}
+                  className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <Kicker>Horas trabalhadas</Kicker>
+
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.5"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
+                  className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <Kicker>
+                  Produção do dia · {selectedFront?.unit ?? "un"}
+                </Kicker>
+
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={production}
+                  onChange={(e) => setProduction(e.target.value)}
+                  className="mt-2 h-11 border-black/10 bg-white text-base sm:h-10 sm:text-sm"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <Kicker>Ocorrência de campo</Kicker>
+
+                <Textarea
+                  value={occurrence}
+                  onChange={(e) => setOccurrence(e.target.value)}
+                  placeholder="Registre impedimentos, decisões ou observações..."
+                  className="mt-2 min-h-28 border-black/10 bg-white text-base sm:min-h-24 sm:text-sm"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <label className="inline-flex h-11 max-w-full cursor-pointer items-center gap-2 border border-black/10 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.1em]">
+                  <Camera className="h-4 w-4 shrink-0" />
+
+                  <span className="truncate">
+                    {evidence
+                      ? evidence.name
+                      : "Tirar / anexar foto"}
+                  </span>
+
+                  <input
+                    aria-label="Evidência fotográfica"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) =>
+                      setEvidence(e.target.files?.[0] || null)
+                    }
+                  />
+                </label>
+
+                {evidence && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEvidence(null)}
+                    className="h-11 text-[#b84f42]"
+                  >
+                    <X className="mr-1 h-4 w-4" />
+                    Remover
+                  </Button>
+                )}
+
+                <Button
+                  type="submit"
+                  className="h-12 bg-[#202321] text-white sm:ml-auto"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+
+                  {editingDiaryId
+                    ? "Atualizar diário"
+                    : "Salvar diário"}
+                </Button>
+              </div>
+
+              <p className="text-xs leading-5 text-[#70756e] sm:col-span-2">
+                <FileImage className="mr-1 inline h-3.5 w-3.5" />
+
+                No celular, o botão de foto prioriza a câmera traseira
+                quando o navegador oferecer esse recurso.
+              </p>
+            </CardContent>
+          </Card>
+        </form>
+
+        <section className="mt-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <Kicker>Histórico</Kicker>
+
+              <h2 className="mt-1 text-2xl font-black uppercase">
+                Diários registrados
+              </h2>
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-[#858a82]" />
+
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar diário..."
+                className="border-black/10 bg-white pl-9"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {project.diaries
+              .filter((item) => {
+                const front = project.fronts.find(
+                  (front) => front.id === item.frontId
+                );
+
+                const text = [
+                  item.service,
+                  item.summary,
+                  item.occurrence,
+                  item.weather,
+                  front?.name,
+                  front?.code,
+                ]
+                  .join(" ")
+                  .toLowerCase();
+
+                return text.includes(query.toLowerCase());
+              })
+              .map((item) => {
+                const front = project.fronts.find(
+                  (front) => front.id === item.frontId
+                );
+
+                return (
+                  <Card
+                    key={item.id}
+                    className="rounded-none border-0 bg-[#f6f6f3] shadow-[4px_4px_0_#d0d1cb]"
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <Kicker>
+                            {formatDate(item.date)} ·{" "}
+                            {front?.code ?? "GERAL"}
+                          </Kicker>
+
+                          <h3 className="mt-2 text-lg font-black uppercase">
+                            {item.service}
+                          </h3>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => beginEditDiary(item)}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" />
+                            Editar
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const confirmed =
+                                window.confirm(
+                                  "Tem certeza que deseja excluir este diário? A produção registrada também será removida da frente."
+                                );
+
+                              if (!confirmed) return;
+
+                              deleteDiary(item.id);
+
+                              toast.success(
+                                "Diário excluído com sucesso"
+                              );
+                            }}
+                            className="text-[#b84f42]"
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />
+                            Excluir
+                          </Button>
+                        </div>
+                      </div>
+
+                      <p className="mt-4 text-sm leading-6">
+                        {item.summary}
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[#858a82]">
+                        <span className="bg-[#e8e9e4] px-2 py-1">
+                          {item.weather}
+                        </span>
+
+                        <span className="bg-[#e8e9e4] px-2 py-1">
+                          {item.workforce} pessoas
+                        </span>
+
+                        <span className="bg-[#e8e9e4] px-2 py-1">
+                          {item.hours}h
+                        </span>
+
+                        <span className="bg-[#e8e9e4] px-2 py-1">
+                          +{item.production}{" "}
+                          {front?.unit ?? "un"}
+                        </span>
+                      </div>
+
+                      <details className="mt-5 border-t border-black/10 pt-4">
+                        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.12em] text-[#789249]">
+                          Ver detalhes
+                        </summary>
+
+                        <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                          <div>
+                            <Kicker>Data</Kicker>
+                            <p className="mt-1">
+                              {formatDate(item.date, true)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <Kicker>Frente</Kicker>
+                            <p className="mt-1">
+                              {front
+                                ? `${front.code} · ${front.name}`
+                                : "Não informada"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <Kicker>Serviço</Kicker>
+                            <p className="mt-1">
+                              {item.service}
+                            </p>
+                          </div>
+
+                          <div>
+                            <Kicker>Produção</Kicker>
+                            <p className="mt-1">
+                              {item.production}{" "}
+                              {front?.unit ?? "un"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <Kicker>Equipe</Kicker>
+                            <p className="mt-1">
+                              {item.workforce} pessoas
+                            </p>
+                          </div>
+
+                          <div>
+                            <Kicker>Horas</Kicker>
+                            <p className="mt-1">
+                              {item.hours} horas
+                            </p>
+                          </div>
+
+                          <div>
+                            <Kicker>Clima</Kicker>
+                            <p className="mt-1">
+                              {item.weather}
+                            </p>
+                          </div>
+
+                          {item.occurrence && (
+                            <div className="sm:col-span-2">
+                              <Kicker>Ocorrência</Kicker>
+                              <p className="mt-1 whitespace-pre-wrap">
+                                {item.occurrence}
+                              </p>
+                            </div>
+                          )}
+
+                          {item.evidenceDataUrl && (
+                            <div className="sm:col-span-2">
+                              <Kicker>Evidência</Kicker>
+
+                              <a
+                                href={item.evidenceDataUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-2 inline-flex items-center gap-2 font-semibold text-[#789249] hover:underline"
+                              >
+                                <FileImage className="h-4 w-4" />
+                                Ver foto anexada
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+            {project.diaries.filter((item) => {
+              const front = project.fronts.find(
+                (front) => front.id === item.frontId
+              );
+
+              return [
+                item.service,
+                item.summary,
+                item.occurrence,
+                item.weather,
+                front?.name,
+                front?.code,
+              ]
+                .join(" ")
+                .toLowerCase()
+                .includes(query.toLowerCase());
+            }).length === 0 && (
+              <Card className="rounded-none border-0 bg-[#f6f6f3]">
+                <CardContent className="p-5 text-sm text-[#70756e]">
+                  {project.diaries.length === 0
+                    ? "Nenhum diário registrado ainda. Faça o primeiro lançamento acima."
+                    : "Nenhum diário corresponde à busca."}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
