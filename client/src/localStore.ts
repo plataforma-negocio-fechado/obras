@@ -292,24 +292,84 @@ function mergeSeedActions(rawActions: LocalAction[] | undefined) {
 }
 
 function normalizeProject(raw: Partial<LocalProject>): LocalProject {
-  const isLegacyJardimPlanalto = raw.name === "Jardim Planalto" && raw.location === "São Paulo";
+  const isLegacyJardimPlanalto =
+    raw.name === "Jardim Planalto" &&
+    raw.location === "São Paulo";
+
+  const rawFronts =
+    Array.isArray(raw.fronts) && raw.fronts.length > 0
+      ? raw.fronts
+      : seed.fronts;
+
   return {
     ...seed,
     ...raw,
-    location: isLegacyJardimPlanalto ? seed.location : raw.location ?? seed.location,
-    fronts: (raw.fronts ?? seed.fronts).map((front) => ({
-      ...front,
-      services: Array.isArray(front.services) && front.services.length > 0 ? front.services : seed.fronts.find((item) => item.id === front.id)?.services ?? [],
-    })),
-    actions: mergeSeedActions(raw.actions),
-    events: raw.events ?? seed.events,
-    diaries: raw.diaries ?? [],
-    weeklyTargets: raw.weeklyTargets ?? [],
-    materialReceipts: raw.materialReceipts ?? [],
-    teamMembers: raw.teamMembers ?? [],
-    teamAssignments: raw.teamAssignments ?? [],
-    machines: raw.machines ?? [],
-    machineLogs: raw.machineLogs ?? [],
+
+    location: isLegacyJardimPlanalto
+      ? seed.location
+      : raw.location ?? seed.location,
+
+    fronts: rawFronts.map((front) => {
+      const seedFront = seed.fronts.find(
+        (item) => item.id === front.id
+      );
+
+      return {
+        ...front,
+
+        services:
+          Array.isArray(front.services) &&
+          front.services.length > 0
+            ? front.services
+            : seedFront?.services ?? [],
+      };
+    }),
+
+    actions: mergeSeedActions(
+      Array.isArray(raw.actions)
+        ? raw.actions
+        : undefined
+    ),
+
+    events:
+      Array.isArray(raw.events)
+        ? raw.events
+        : seed.events,
+
+    diaries:
+      Array.isArray(raw.diaries)
+        ? raw.diaries
+        : [],
+
+    weeklyTargets:
+      Array.isArray(raw.weeklyTargets)
+        ? raw.weeklyTargets
+        : [],
+
+    materialReceipts:
+      Array.isArray(raw.materialReceipts)
+        ? raw.materialReceipts
+        : [],
+
+    teamMembers:
+      Array.isArray(raw.teamMembers)
+        ? raw.teamMembers
+        : [],
+
+    teamAssignments:
+      Array.isArray(raw.teamAssignments)
+        ? raw.teamAssignments
+        : [],
+
+    machines:
+      Array.isArray(raw.machines)
+        ? raw.machines
+        : [],
+
+    machineLogs:
+      Array.isArray(raw.machineLogs)
+        ? raw.machineLogs
+        : [],
   };
 }
 
