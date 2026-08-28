@@ -685,3 +685,4 @@ export default function OperationalPage({ mode }: Props) {
       </div>
     </div>
   );
+}
