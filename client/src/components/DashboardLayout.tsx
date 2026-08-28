@@ -15,7 +15,6 @@ const groups = [
     { icon: Target, label: "Plano de ação", path: "/acoes" },
   ]},
   { title: "Planejamento", items: [
-    { icon: Target, label: "Planejamento físico", path: "/planejamento" },
     { icon: ClipboardCheck, label: "Relatório semanal", path: "/relatorio" },
     { icon: LayoutDashboard, label: "Linha do tempo", path: "/timeline" },
   ]},
