@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { appendMissingByLabel, applyProduction, sameLabel } from "@/localRules";
+import {
+  appendMissingByLabel,
+  applyProduction,
+  removeProduction,
+  sameLabel,
+} from "@/localRules";
 import { getCurrentUser, readRemoteSnapshot, writeRemoteSnapshot } from "@/syncService";
 import { supabase } from "@/supabaseClient";
 
@@ -407,6 +412,77 @@ export function useLocalProject() {
     [update],
   );
 
+  const updateDiary = useCallback(
+  (id: string, entry: Omit<LocalDiary, "id">) =>
+    update((current) => {
+      const oldDiary = current.diaries.find(
+        (diary) => diary.id === id
+      );
+
+      if (!oldDiary) return current;
+
+      let fronts = current.fronts;
+
+      // Remove a produção antiga
+      fronts = fronts.map((front) => {
+        if (front.id !== oldDiary.frontId) return front;
+
+        return {
+          ...front,
+          ...removeProduction(front, oldDiary.production),
+        };
+      });
+
+      // Aplica a nova produção
+      fronts = fronts.map((front) => {
+        if (front.id !== entry.frontId) return front;
+
+        return {
+          ...front,
+          ...applyProduction(front, entry.production),
+        };
+      });
+
+      return {
+        ...current,
+        diaries: current.diaries.map((diary) =>
+          diary.id === id
+            ? { ...entry, id }
+            : diary
+        ),
+        fronts,
+      };
+    }),
+  [update],
+);
+
+const deleteDiary = useCallback(
+  (id: string) =>
+    update((current) => {
+      const diary = current.diaries.find(
+        (item) => item.id === id
+      );
+
+      if (!diary) return current;
+
+      return {
+        ...current,
+        diaries: current.diaries.filter(
+          (item) => item.id !== id
+        ),
+        fronts: current.fronts.map((front) => {
+          if (front.id !== diary.frontId) return front;
+
+          return {
+            ...front,
+            ...removeProduction(front, diary.production),
+          };
+        }),
+      };
+    }),
+  [update],
+);
+
   const addEvent = useCallback((event: Omit<LocalEvent, "id">) => update((current) => ({ ...current, events: [{ ...event, id: makeId("event") }, ...current.events] })), [update]);
 
   const setEventStatus = useCallback(
@@ -478,5 +554,5 @@ export function useLocalProject() {
     };
   }), [update]);
 
-  return { project, syncStatus, syncNow, updateProject, addDiary, addEvent, setEventStatus, addAction, updateAction, replaceProject, toggleAction, addFront, addService, upsertWeeklyTarget, addMaterialReceipt, addTeamMember, upsertTeamAssignment, addMachine, upsertMachineLog };
+  return { project, syncStatus, syncNow, updateProject, addDiary, updateDiary, deleteDiary, addEvent, setEventStatus, addAction, updateAction, replaceProject, toggleAction, addFront, addService, upsertWeeklyTarget, addMaterialReceipt, addTeamMember, upsertTeamAssignment, addMachine, upsertMachineLog };
 }
