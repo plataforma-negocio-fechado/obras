@@ -6,6 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import OperationalPage from "@/pages/OperationalPage";
 import OperationalExtrasPage from "@/pages/OperationalExtrasPage";
+import ActionsPage from "@/pages/ActionsPage";
 import SetupPage from "@/pages/SetupPage";
 import NotFound from "@/pages/NotFound";
 import BackupPage from "@/pages/BackupPage";
@@ -22,12 +23,12 @@ import { usePilotLocation } from "@/pilotRouting";
 function AppRouter() {
   const [path] = usePilotLocation();
   if (path === "/") return <StartPage />;
-
   const content =
     path === "/hoje" ? <Home /> :
     path === "/diario" ? <OperationalPage mode="diario" /> :
     path === "/frentes" ? <OperationalExtrasPage mode="frentes" /> :
-    path === "/eventos" ? <OperationalExtrasPage mode="eventos" /> :
+    path === "/ocorrencias" ? <OperationalExtrasPage mode="eventos" /> :
+    path === "/acoes" ? <ActionsPage /> :
     path === "/timeline" ? <OperationalExtrasPage mode="timeline" /> :
     path === "/cadastro" ? <SetupPage /> :
     path === "/dados" ? <BackupPage /> :
@@ -39,19 +40,9 @@ function AppRouter() {
     path === "/maquinas" ? <MachinesPage /> :
     path === "/preferencias" ? <PreferencesPage /> :
     <NotFound />;
-
   return <DashboardLayout>{content}</DashboardLayout>;
 }
 
 export default function App() {
-  return (
-    <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <AppRouter />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
+  return <ErrorBoundary><ThemeProvider defaultTheme="light"><TooltipProvider><Toaster /><AppRouter /></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }
