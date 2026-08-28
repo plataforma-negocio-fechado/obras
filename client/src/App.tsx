@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import OperationalPage from "@/pages/OperationalPage";
 import OperationalExtrasPage from "@/pages/OperationalExtrasPage";
 import ActionsPage from "@/pages/ActionsPage";
+import OccurrencesPage from "@/pages/OccurrencesPage";
 import SetupPage from "@/pages/SetupPage";
 import NotFound from "@/pages/NotFound";
 import BackupPage from "@/pages/BackupPage";
@@ -27,7 +28,7 @@ function AppRouter() {
     path === "/hoje" ? <Home /> :
     path === "/diario" ? <OperationalPage mode="diario" /> :
     path === "/frentes" ? <OperationalExtrasPage mode="frentes" /> :
-    path === "/ocorrencias" ? <OperationalExtrasPage mode="eventos" /> :
+    path === "/ocorrencias" ? <OccurrencesPage /> :
     path === "/acoes" ? <ActionsPage /> :
     path === "/timeline" ? <OperationalExtrasPage mode="timeline" /> :
     path === "/cadastro" ? <SetupPage /> :
