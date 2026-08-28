@@ -1,9 +1,13 @@
 import type { LocalProject } from "@/localStore";
 import { supabase } from "@/supabaseClient";
 
-export type SyncSnapshot = {
-  project: LocalProject;
+export type SyncMetadata = {
   updatedAt: string;
+  version: number;
+};
+
+export type SyncSnapshot = SyncMetadata & {
+  project: LocalProject;
 };
 
 export async function getCurrentUser() {
@@ -32,17 +36,26 @@ export async function signOut() {
 export async function readRemoteSnapshot(userId: string): Promise<SyncSnapshot | null> {
   const { data, error } = await supabase
     .from("project_snapshots")
-    .select("project, updated_at")
+    .select("project, updated_at, version")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  return { project: data.project as LocalProject, updatedAt: data.updated_at as string };
+  return {
+    project: data.project as LocalProject,
+    updatedAt: data.updated_at as string,
+    version: Number(data.version) || 1,
+  };
 }
 
-export async function writeRemoteSnapshot(userId: string, project: LocalProject) {
+export async function writeRemoteSnapshot(userId: string, project: LocalProject, metadata: SyncMetadata) {
   const { error } = await supabase.from("project_snapshots").upsert(
-    { user_id: userId, project, version: 1 },
+    {
+      user_id: userId,
+      project,
+      version: metadata.version,
+      updated_at: metadata.updatedAt,
+    },
     { onConflict: "user_id" },
   );
   if (error) throw error;
