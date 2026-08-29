@@ -19,11 +19,13 @@ import TeamPage from "@/pages/TeamPage";
 import MachinesPage from "@/pages/MachinesPage";
 import PreferencesPage from "@/pages/PreferencesPage";
 import StartPage from "@/pages/StartPage";
+import FieldPage from "@/pages/FieldPage";
 import { usePilotLocation } from "@/pilotRouting";
 
 function AppRouter() {
   const [path] = usePilotLocation();
   if (path === "/") return <StartPage />;
+  if (path === "/campo") return <FieldPage />;
   const content =
     path === "/hoje" ? <Home /> :
     path === "/diario" ? <DiaryPage /> :
