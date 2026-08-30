@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/useMobile";
 import { usePilotLocation } from "@/pilotRouting";
 import { useLocalProject } from "@/localStore";
-import { Bell, Building2, ClipboardCheck, Download, Image, LayoutDashboard, PackageCheck, PanelLeft, Settings2, Target, Users, Wrench, X } from "lucide-react";
+import { Bell, Building2, ClipboardCheck, Download, Image, LayoutDashboard, PackageCheck, PanelLeft, Settings2, Target, Users, Wrench, X, CalendarDays } from "lucide-react";
 import { useState } from "react";
 
 const groups = [
@@ -15,6 +15,7 @@ const groups = [
     { icon: Target, label: "Plano de ação", path: "/acoes" },
   ]},
   { title: "Planejamento", items: [
+    { icon: CalendarDays, label: "Planejamento semanal", path: "/planejamento" },
     { icon: ClipboardCheck, label: "Relatório semanal", path: "/relatorio" },
     { icon: LayoutDashboard, label: "Linha do tempo", path: "/timeline" },
   ]},
