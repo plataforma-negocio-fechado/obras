@@ -13,6 +13,7 @@ import SetupPage from "@/pages/SetupPage";
 import NotFound from "@/pages/NotFound";
 import BackupPage from "@/pages/BackupPage";
 import WeeklyReportPage from "@/pages/WeeklyReportPage";
+import WeeklyPlanningPage from "@/pages/WeeklyPlanningPage";
 import EvidenceGalleryPage from "@/pages/EvidenceGalleryPage";
 import MaterialsPage from "@/pages/MaterialsPage";
 import TeamPage from "@/pages/TeamPage";
@@ -32,6 +33,7 @@ function AppRouter() {
     path === "/frentes" ? <OperationalExtrasPage mode="frentes" /> :
     path === "/ocorrencias" ? <OccurrencesPage /> :
     path === "/acoes" ? <ActionsPage /> :
+    path === "/planejamento" ? <WeeklyPlanningPage /> :
     path === "/timeline" ? <OperationalExtrasPage mode="timeline" /> :
     path === "/cadastro" ? <SetupPage /> :
     path === "/dados" ? <BackupPage /> :
