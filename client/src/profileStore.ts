@@ -3,6 +3,7 @@ export type ProfileProject = {
   location: string;
   role: string;
   result?: string;
+  images?: string[];
 };
 
 export type ProfileExperience = {
@@ -22,6 +23,8 @@ export type ProfessionalProfile = {
   email: string;
   crea: string;
   linkedin?: string;
+  avatarUrl?: string;
+  coverImageUrl?: string;
   skills: string[];
   highlights: { value: string; label: string }[];
   projects: ProfileProject[];
@@ -39,16 +42,7 @@ export const defaultProfile: ProfessionalProfile = {
   email: "engenharia.diegosilva@gmail.com",
   crea: "CREA-PB nº 162015408-0",
   linkedin: "https://www.linkedin.com/in/diego-silva-gomes-93955a381",
-  skills: [
-    "Gestão e planejamento de obras",
-    "Licitações públicas",
-    "Engenharia de custos e orçamento",
-    "Loteamentos",
-    "Terraplanagem e drenagem",
-    "Projetos estruturais",
-    "Compatibilização de projetos",
-    "Pavimentação",
-  ],
+  skills: ["Gestão e planejamento de obras", "Licitações públicas", "Engenharia de custos e orçamento", "Loteamentos", "Terraplanagem e drenagem", "Projetos estruturais", "Compatibilização de projetos", "Pavimentação"],
   highlights: [
     { value: "30", label: "licitações vitoriosas" },
     { value: "+R$400 mi", label: "em contratos e atas movimentados" },
@@ -56,11 +50,11 @@ export const defaultProfile: ProfessionalProfile = {
     { value: "15", label: "contratos de sinalização gerenciados" },
   ],
   projects: [
-    { title: "Loteamento Jardim Planalto", location: "Remígio/PB", role: "Análise de viabilidade, projeto de terraplanagem e projeto de drenagem" },
-    { title: "Complexo de Saúde Eisenhower Segundo", location: "Patos/PB", role: "Projeto estrutural, combate a incêndio, orçamento e assessoria para aprovação", result: "Obra de aproximadamente R$ 10 milhões" },
-    { title: "Mercado Público", location: "São Bento/PB", role: "Projeto estrutural de sistema misto metálico + concreto armado" },
-    { title: "Pavimentação Asfáltica", location: "São Bento/PB", role: "Projeto executivo de pavimentação asfáltica em TSD para contrato entre a Construtora Niemaia e a CODEVASF" },
-    { title: "Abatedouro Público", location: "Várzea/PB", role: "Desenvolvimento de projeto completo e orçamento, com exceção dos projetos elétricos e hidrossanitários" },
+    { title: "Loteamento Jardim Planalto", location: "Remígio/PB", role: "Análise de viabilidade, projeto de terraplanagem e projeto de drenagem", images: [] },
+    { title: "Complexo de Saúde Eisenhower Segundo", location: "Patos/PB", role: "Projeto estrutural, combate a incêndio, orçamento e assessoria para aprovação", result: "Obra de aproximadamente R$ 10 milhões", images: [] },
+    { title: "Mercado Público", location: "São Bento/PB", role: "Projeto estrutural de sistema misto metálico + concreto armado", images: [] },
+    { title: "Pavimentação Asfáltica", location: "São Bento/PB", role: "Projeto executivo de pavimentação asfáltica em TSD para contrato entre a Construtora Niemaia e a CODEVASF", images: [] },
+    { title: "Abatedouro Público", location: "Várzea/PB", role: "Desenvolvimento de projeto completo e orçamento, com exceção dos projetos elétricos e hidrossanitários", images: [] },
   ],
   experience: [
     { period: "Jul/2024 — atual", company: "Construtora NIEMAIA — Pavimentação Asfáltica", role: "Consultoria em engenharia e licitações", bullets: ["Participação direta em 30 licitações de pavimentação vencidas nos últimos 2 anos.", "Responsável pelo setor de sinalização horizontal e vertical, com gestão de 15 contratos em 25 cidades.", "Atuação em convênios, medições, regularização junto ao CREA e elaboração de projetos executivos e as built."] },
@@ -75,7 +69,12 @@ export function loadProfile(): ProfessionalProfile {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultProfile;
-    return { ...defaultProfile, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<ProfessionalProfile>;
+    return {
+      ...defaultProfile,
+      ...parsed,
+      projects: (parsed.projects ?? defaultProfile.projects).map((project) => ({ ...project, images: project.images ?? [] })),
+    };
   } catch {
     return defaultProfile;
   }
