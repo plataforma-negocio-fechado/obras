@@ -31,7 +31,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build static site
         env:
-          VITE_BASE_PATH: /obras/
+          VITE_BASE_PATH: /ferramentas/
         run: pnpm exec vite build
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
