@@ -4,7 +4,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import OperationalPage from "@/pages/OperationalPage";
 import OperationalExtrasPage from "@/pages/OperationalExtrasPage";
 import DiaryPage from "@/pages/DiaryPage";
 import ActionsPage from "@/pages/ActionsPage";
@@ -27,7 +26,8 @@ import { usePilotLocation } from "@/pilotRouting";
 
 function AppRouter() {
   const [path] = usePilotLocation();
-  if (path === "/") return <StartPage />;
+  if (path === "/") return <ProfilePage />;
+  if (path === "/obras") return <StartPage />;
   if (path === "/campo") return <FieldPage />;
   if (path === "/perfil/editar") return <ProfileEditPage />;
   if (path === "/perfil" || path === "/perfil/diego-silva") return <ProfilePage />;
