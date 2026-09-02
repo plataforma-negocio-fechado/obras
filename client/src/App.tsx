@@ -22,12 +22,14 @@ import PreferencesPage from "@/pages/PreferencesPage";
 import StartPage from "@/pages/StartPage";
 import FieldPage from "@/pages/FieldPage";
 import ProfilePage from "@/pages/ProfilePage";
+import ProfileEditPage from "@/pages/ProfileEditPage";
 import { usePilotLocation } from "@/pilotRouting";
 
 function AppRouter() {
   const [path] = usePilotLocation();
   if (path === "/") return <StartPage />;
   if (path === "/campo") return <FieldPage />;
+  if (path === "/perfil/editar") return <ProfileEditPage />;
   if (path === "/perfil" || path === "/perfil/diego-silva") return <ProfilePage />;
   const content =
     path === "/hoje" ? <Home /> :
