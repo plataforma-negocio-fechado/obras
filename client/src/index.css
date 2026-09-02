@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -14,7 +14,7 @@
   --muted: #617080;
   --white: #fffdf8;
   --display: 'Cormorant Garamond', Georgia, serif;
-  --body: 'DM Sans', Arial, sans-serif;
+  --body: 'Space Grotesk', Arial, sans-serif;
   --mono: 'Space Mono', monospace;
 
   font-family: var(--body);
@@ -27,7 +27,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; background: var(--paper); color: var(--ink); line-height: 1.6; }
+body { margin: 0; min-width: 320px; background: var(--paper); color: var(--ink); line-height: 1.6; font-family: var(--body); }
 a { color: inherit; text-decoration: none; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
