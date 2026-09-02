@@ -29,6 +29,7 @@ function AppRouter() {
   if (path === "/") return <ProfilePage />;
   if (path === "/obras") return <StartPage />;
   if (path === "/campo") return <FieldPage />;
+  if (path === "/meu-perfil") return <ProfileEditPage />;
   if (path === "/perfil/editar") return <ProfileEditPage />;
   if (path === "/perfil" || path === "/perfil/diego-silva") return <ProfilePage />;
   const content =
