@@ -15,73 +15,55 @@ export default function ProfilePage() {
 
   const shareProfile = async () => {
     const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({ title: `${profile.name} — ${profile.title}`, text: profile.headline, url });
-      return;
-    }
+    if (navigator.share) { await navigator.share({ title: `${profile.name} — ${profile.title}`, text: profile.headline, url }); return; }
     await navigator.clipboard?.writeText(url);
   };
 
   const whatsappUrl = `https://wa.me/55${profile.phone.replace(/\D/g, "")}?text=${encodeURIComponent("Olá Diego, vi seu perfil profissional no Negócio Fechado e gostaria de conversar sobre uma oportunidade.")}`;
+  const coverStyle = profile.coverImageUrl ? { backgroundImage: `url(${profile.coverImageUrl})` } : undefined;
 
   return (
     <main className="min-h-screen bg-[#f8f5ed] text-[#102e46]">
-      <div className="bg-[#102e46] text-[#dce5eb] font-mono text-[10px] uppercase tracking-[.16em]">
-        <div className="mx-auto flex max-w-6xl justify-between gap-4 px-5 py-2 md:px-8"><span>Negócio Fechado</span><span>Perfil profissional</span></div>
-      </div>
-
-      <header className="sticky top-0 z-20 border-b border-[#d8d2c5]/80 bg-[#f8f5ed]/95 backdrop-blur-md">
-        <div className="mx-auto flex min-h-[76px] max-w-6xl items-center justify-between gap-4 px-5 md:px-8">
-          <div className="flex items-center gap-3"><span className="relative h-7 w-7 skew-y-[-8deg] border-[3px] border-[#102e46] border-b-[#d96b32] border-r-[#d96b32]"/><span className="font-display text-2xl font-semibold tracking-tight">NEGÓCIO FECHADO</span></div>
-          <Button variant="outline" onClick={shareProfile} className="rounded-full border-[#d8d2c5] text-[#102e46] hover:bg-[#fffdf8]"><Share2 className="mr-2 h-4 w-4"/>Compartilhar</Button>
-        </div>
-      </header>
+      <div className="bg-[#102e46] text-[#dce5eb] font-mono text-[10px] uppercase tracking-[.16em]"><div className="mx-auto flex max-w-6xl justify-between gap-4 px-5 py-2 md:px-8"><span>Negócio Fechado</span><span>Perfil profissional</span></div></div>
+      <header className="sticky top-0 z-20 border-b border-[#d8d2c5]/80 bg-[#f8f5ed]/95 backdrop-blur-md"><div className="mx-auto flex min-h-[76px] max-w-6xl items-center justify-between gap-4 px-5 md:px-8"><div className="flex items-center gap-3"><span className="relative h-7 w-7 skew-y-[-8deg] border-[3px] border-[#102e46] border-b-[#d96b32] border-r-[#d96b32]"/><span className="font-display text-2xl font-semibold tracking-tight">NEGÓCIO FECHADO</span></div><Button variant="outline" onClick={shareProfile} className="rounded-full border-[#d8d2c5] text-[#102e46] hover:bg-[#fffdf8]"><Share2 className="mr-2 h-4 w-4"/>Compartilhar</Button></div></header>
 
       <section className="border-b border-[#d8d2c5] bg-[#fffdf8]">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 md:grid-cols-[1.2fr_.8fr] md:items-end md:px-8 md:py-20">
           <div>
-            <p className="mb-5 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[.17em] text-[#d96b32]"><span className="h-2 w-2 rounded-full bg-[#d96b32]"/> Perfil profissional · {profile.crea}</p>
-            <h1 className="max-w-3xl font-display text-6xl font-semibold leading-[.9] tracking-[-.06em] md:text-8xl">{profile.name}</h1>
-            <p className="mt-4 text-xl font-semibold md:text-2xl">{profile.title}</p>
-            <p className="mt-2 max-w-2xl text-lg leading-7 text-[#617080]">{profile.headline}</p>
-            <div className="mt-6 flex flex-wrap gap-5 text-sm text-[#617080]"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-[#d96b32]"/>{profile.location}</span><span className="inline-flex items-center gap-2"><Phone className="h-4 w-4 text-[#d96b32]"/>{profile.phone}</span></div>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button onClick={() => window.location.href = whatsappUrl} className="rounded-full bg-[#d96b32] px-5 text-white hover:bg-[#bd5725]"><Phone className="mr-2 h-4 w-4"/>Falar comigo</Button>
-              {profile.linkedin && <Button variant="outline" onClick={() => window.open(profile.linkedin, "_blank", "noopener,noreferrer")} className="rounded-full border-[#d8d2c5]"><Linkedin className="mr-2 h-4 w-4"/>LinkedIn</Button>}
+            <div className="mb-6 flex items-center gap-4">
+              {profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.name} className="h-20 w-20 rounded-full object-cover ring-4 ring-[#f0ece3]" /> : <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#102e46] font-display text-3xl font-semibold text-white">{profile.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}</div>}
+              <p className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[.17em] text-[#d96b32]"><span className="h-2 w-2 rounded-full bg-[#d96b32]"/> Perfil profissional · {profile.crea}</p>
             </div>
+            <h1 className="max-w-3xl font-display text-6xl font-semibold leading-[.9] tracking-[-.06em] md:text-8xl">{profile.name}</h1>
+            <p className="mt-4 text-xl font-semibold md:text-2xl">{profile.title}</p><p className="mt-2 max-w-2xl text-lg leading-7 text-[#617080]">{profile.headline}</p>
+            <div className="mt-6 flex flex-wrap gap-5 text-sm text-[#617080]"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-[#d96b32]"/>{profile.location}</span><span className="inline-flex items-center gap-2"><Phone className="h-4 w-4 text-[#d96b32]"/>{profile.phone}</span></div>
+            <div className="mt-8 flex flex-wrap gap-3"><Button onClick={() => window.location.href = whatsappUrl} className="rounded-full bg-[#d96b32] px-5 text-white hover:bg-[#bd5725]"><Phone className="mr-2 h-4 w-4"/>Falar comigo</Button>{profile.linkedin && <Button variant="outline" onClick={() => window.open(profile.linkedin, "_blank", "noopener,noreferrer")} className="rounded-full border-[#d8d2c5]"><Linkedin className="mr-2 h-4 w-4"/>LinkedIn</Button>}</div>
           </div>
-          <div className="relative min-h-72 rounded-3xl bg-gradient-to-br from-[#d3e2e6] via-[#d9d2c4] to-[#8d543e] shadow-[0_26px_74px_-34px_rgba(16,46,70,.55)]">
-            <div className="absolute bottom-[-18px] left-[-18px] bg-[#102e46] p-6 text-white shadow-xl"><p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#f4ae77]">ENGENHARIA CIVIL</p><p className="mt-2 font-display text-3xl font-semibold">Projeto • Gestão • Resultado</p></div>
-            <span className="absolute right-5 top-5 font-mono text-[9px] tracking-[.18em] text-white/70">DS / 001</span>
+          <div style={coverStyle} className={`relative min-h-72 rounded-3xl bg-cover bg-center shadow-[0_26px_74px_-34px_rgba(16,46,70,.55)] ${profile.coverImageUrl ? "" : "bg-gradient-to-br from-[#d3e2e6] via-[#d9d2c4] to-[#8d543e]"}`}>
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-t from-black/35 to-transparent" />
+            <div className="absolute bottom-[-18px] left-[-18px] bg-[#102e46] p-6 text-white shadow-xl"><p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#f4ae77]">ENGENHARIA CIVIL</p><p className="mt-2 font-display text-3xl font-semibold">Projeto • Gestão • Resultado</p></div><span className="absolute right-5 top-5 font-mono text-[9px] tracking-[.18em] text-white/70">DS / 001</span>
           </div>
         </div>
       </section>
 
       <div className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
-        <section className="grid gap-px border border-[#d8d2c5] bg-[#d8d2c5] sm:grid-cols-2 lg:grid-cols-4">
-          {profile.highlights.map(item => <Card key={item.label} className="rounded-none border-0 bg-[#f8f5ed] shadow-none"><CardContent className="p-6"><p className="font-display text-4xl font-semibold">{item.value}</p><p className="mt-2 font-mono text-[9px] font-bold uppercase leading-4 tracking-[.14em] text-[#617080]">{item.label}</p></CardContent></Card>)}
-        </section>
+        <section className="grid gap-px border border-[#d8d2c5] bg-[#d8d2c5] sm:grid-cols-2 lg:grid-cols-4">{profile.highlights.map(item => <Card key={item.label} className="rounded-none border-0 bg-[#f8f5ed] shadow-none"><CardContent className="p-6"><p className="font-display text-4xl font-semibold">{item.value}</p><p className="mt-2 font-mono text-[9px] font-bold uppercase leading-4 tracking-[.14em] text-[#617080]">{item.label}</p></CardContent></Card>)}</section>
+        <section className="mt-16 grid gap-12 lg:grid-cols-[1.35fr_.65fr]"><div><SectionTitle eyebrow="Sobre" title="Quem sou"/><p className="mt-6 max-w-3xl text-base leading-8 text-[#617080]">{profile.summary}</p></div><div><SectionTitle eyebrow="Competências" title="O que faço"/><div className="mt-6 flex flex-wrap gap-2">{profile.skills.map(skill => <span key={skill} className="border border-[#d8d2c5] bg-[#fffdf8] px-3 py-2 text-xs font-semibold">{skill}</span>)}</div></div></section>
 
-        <section className="mt-16 grid gap-12 lg:grid-cols-[1.35fr_.65fr]">
-          <div><SectionTitle eyebrow="Sobre" title="Quem sou"/><p className="mt-6 max-w-3xl text-base leading-8 text-[#617080]">{profile.summary}</p></div>
-          <div><SectionTitle eyebrow="Competências" title="O que faço"/><div className="mt-6 flex flex-wrap gap-2">{profile.skills.map(skill => <span key={skill} className="border border-[#d8d2c5] bg-[#fffdf8] px-3 py-2 text-xs font-semibold">{skill}</span>)}</div></div>
-        </section>
-
-        <section className="mt-20"><SectionTitle eyebrow="Portfólio" title="Projetos em destaque"/><div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{profile.projects.map(project => <Card key={project.title} className="group rounded-2xl border border-[#d8d2c5] bg-[#fffdf8] shadow-none transition hover:-translate-y-1 hover:shadow-[0_22px_42px_-30px_rgba(16,46,70,.65)]"><CardContent className="p-7"><div className="flex justify-between"><BriefcaseBusiness className="h-5 w-5 text-[#d96b32]"/><ArrowUpRight className="h-4 w-4 text-[#617080]"/></div><h3 className="mt-8 font-display text-2xl font-semibold leading-tight">{project.title}</h3><p className="mt-2 font-mono text-[9px] font-bold uppercase tracking-[.14em] text-[#d96b32]">{project.location}</p><p className="mt-5 text-sm leading-6 text-[#617080]">{project.role}</p>{project.result && <p className="mt-5 border-l-2 border-[#d96b32] pl-3 text-xs font-semibold text-[#102e46]">{project.result}</p>}</CardContent></Card>)}</div></section>
+        <section className="mt-20"><SectionTitle eyebrow="Portfólio" title="Projetos em destaque"/><div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{profile.projects.map(project => <Card key={project.title} className="group overflow-hidden rounded-2xl border border-[#d8d2c5] bg-[#fffdf8] shadow-none transition hover:-translate-y-1 hover:shadow-[0_22px_42px_-30px_rgba(16,46,70,.65)]"><CardContent className="p-0"><ProjectImage images={project.images ?? []} title={project.title}/><div className="p-7"><div className="flex justify-between"><BriefcaseBusiness className="h-5 w-5 text-[#d96b32]"/><ArrowUpRight className="h-4 w-4 text-[#617080]"/></div><h3 className="mt-8 font-display text-2xl font-semibold leading-tight">{project.title}</h3><p className="mt-2 font-mono text-[9px] font-bold uppercase tracking-[.14em] text-[#d96b32]">{project.location}</p><p className="mt-5 text-sm leading-6 text-[#617080]">{project.role}</p>{project.result && <p className="mt-5 border-l-2 border-[#d96b32] pl-3 text-xs font-semibold text-[#102e46]">{project.result}</p>}</div></CardContent></Card>)}</div></section>
 
         <section className="mt-20"><SectionTitle eyebrow="Experiência" title="Trajetória profissional"/><div className="mt-8 space-y-6">{profile.experience.map(item => <Card key={item.company} className="rounded-2xl border border-[#d8d2c5] bg-[#fffdf8] shadow-none"><CardContent className="p-7 md:grid md:grid-cols-[180px_1fr] md:gap-8"><p className="font-mono text-[9px] font-bold uppercase tracking-[.14em] text-[#d96b32]">{item.period}</p><div><h3 className="font-display text-2xl font-semibold">{item.company}</h3><p className="mt-1 text-sm font-semibold">{item.role}</p><ul className="mt-5 space-y-2 text-sm leading-6 text-[#617080]">{item.bullets.map(b => <li key={b} className="flex gap-2"><span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[#d96b32]"/>{b}</li>)}</ul></div></CardContent></Card>)}</div></section>
 
-        <section className="mt-20 grid gap-6 md:grid-cols-2">
-          <Card className="rounded-2xl border-0 bg-[#102e46] text-white shadow-[8px_8px_0_#d96b32]"><CardContent className="p-8"><p className="font-mono text-[9px] font-bold uppercase tracking-[.2em] text-[#f4ae77]">Formação</p><h3 className="mt-4 font-display text-3xl font-semibold">Engenharia Civil — UFCG</h3><p className="mt-1 text-sm text-white/70">Graduado em 2021</p><h3 className="mt-7 font-display text-2xl font-semibold">Construction Management — Columbia University</h3><p className="mt-1 text-sm text-white/70">Especialização em Gerenciamento de Construções</p></CardContent></Card>
-          <Card className="rounded-2xl border border-[#d8d2c5] bg-[#fffdf8] shadow-none"><CardContent className="p-8"><p className="font-mono text-[9px] font-bold uppercase tracking-[.2em] text-[#d96b32]">Contato profissional</p><a className="mt-6 flex items-center gap-3 text-sm font-semibold hover:text-[#d96b32]" href={`mailto:${profile.email}`}><Mail className="h-4 w-4"/>{profile.email}</a><a className="mt-4 flex items-center gap-3 text-sm font-semibold hover:text-[#d96b32]" href={whatsappUrl} target="_blank" rel="noreferrer"><Phone className="h-4 w-4"/>{profile.phone} · WhatsApp</a>{profile.linkedin && <a className="mt-4 flex items-center gap-3 text-sm font-semibold hover:text-[#d96b32]" href={profile.linkedin} target="_blank" rel="noreferrer"><Linkedin className="h-4 w-4"/>LinkedIn</a>}<p className="mt-4 flex items-center gap-3 text-sm text-[#617080]"><MapPin className="h-4 w-4"/>{profile.location}</p><p className="mt-5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[.12em] text-[#d96b32]"><ExternalLink className="h-4 w-4"/>Perfil profissional · Negócio Fechado</p></CardContent></Card>
-        </section>
+        <section className="mt-20 grid gap-6 md:grid-cols-2"><Card className="rounded-2xl border-0 bg-[#102e46] text-white shadow-[8px_8px_0_#d96b32]"><CardContent className="p-8"><p className="font-mono text-[9px] font-bold uppercase tracking-[.2em] text-[#f4ae77]">Formação</p><h3 className="mt-4 font-display text-3xl font-semibold">Engenharia Civil — UFCG</h3><p className="mt-1 text-sm text-white/70">Graduado em 2021</p><h3 className="mt-7 font-display text-2xl font-semibold">Construction Management — Columbia University</h3><p className="mt-1 text-sm text-white/70">Especialização em Gerenciamento de Construções</p></CardContent></Card><Card className="rounded-2xl border border-[#d8d2c5] bg-[#fffdf8] shadow-none"><CardContent className="p-8"><p className="font-mono text-[9px] font-bold uppercase tracking-[.2em] text-[#d96b32]">Contato profissional</p><a className="mt-6 flex items-center gap-3 text-sm font-semibold hover:text-[#d96b32]" href={`mailto:${profile.email}`}><Mail className="h-4 w-4"/>{profile.email}</a><a className="mt-4 flex items-center gap-3 text-sm font-semibold hover:text-[#d96b32]" href={whatsappUrl} target="_blank" rel="noreferrer"><Phone className="h-4 w-4"/>{profile.phone} · WhatsApp</a>{profile.linkedin && <a className="mt-4 flex items-center gap-3 text-sm font-semibold hover:text-[#d96b32]" href={profile.linkedin} target="_blank" rel="noreferrer"><Linkedin className="h-4 w-4"/>LinkedIn</a>}<p className="mt-4 flex items-center gap-3 text-sm text-[#617080]"><MapPin className="h-4 w-4"/>{profile.location}</p><p className="mt-5 flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[.12em] text-[#d96b32]"><ExternalLink className="h-4 w-4"/>Perfil profissional · Negócio Fechado</p></CardContent></Card></section>
       </div>
-
       <footer className="border-t border-[#d8d2c5] bg-[#fffdf8] px-5 py-10 text-center font-mono text-[9px] font-bold uppercase tracking-[.18em] text-[#617080]">Diego Silva · Engenheiro Civil · Negócio Fechado</footer>
     </main>
   );
 }
 
-function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return <div><p className="font-mono text-[9px] font-bold uppercase tracking-[.2em] text-[#d96b32]">{eyebrow}</p><h2 className="mt-2 font-display text-4xl font-semibold tracking-tight md:text-5xl">{title}</h2></div>;
+function ProjectImage({ images, title }: { images: string[]; title: string }) {
+  if (!images.length) return <div className="flex h-40 items-center justify-center bg-[#f0ece3] text-[#617080]"><BriefcaseBusiness className="h-8 w-8 opacity-40" /></div>;
+  return <div className="h-40 overflow-hidden bg-[#f0ece3]"><img src={images[0]} alt={`Foto de ${title}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" /></div>;
 }
+
+function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) { return <div><p className="font-mono text-[9px] font-bold uppercase tracking-[.2em] text-[#d96b32]">{eyebrow}</p><h2 className="mt-2 font-display text-4xl font-semibold tracking-tight md:text-5xl">{title}</h2></div>; }
