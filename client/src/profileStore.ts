@@ -21,6 +21,7 @@ export type ProfessionalProfile = {
   phone: string;
   email: string;
   crea: string;
+  linkedin?: string;
   skills: string[];
   highlights: { value: string; label: string }[];
   projects: ProfileProject[];
@@ -37,6 +38,7 @@ export const defaultProfile: ProfessionalProfile = {
   phone: "(83) 99608-8942",
   email: "engenharia.diegosilva@gmail.com",
   crea: "CREA-PB nº 162015408-0",
+  linkedin: "https://www.linkedin.com/in/diego-silva-gomes-93955a381",
   skills: [
     "Gestão e planejamento de obras",
     "Licitações públicas",
