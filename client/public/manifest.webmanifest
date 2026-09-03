@@ -1,16 +1,16 @@
 {
-  "name": "Plataforma Negócio Fechado · Módulo: Obras",
-  "short_name": "Módulo: Obras",
-  "description": "Controle operacional local da obra Jardim Planalto.",
-  "start_url": "./#/",
+  "name": "Negócio Fechado",
+  "short_name": "Negócio Fechado",
+  "description": "Plataforma profissional e gestão de obras.",
+  "start_url": "./#/acesso",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#ececea",
-  "theme_color": "#202321",
+  "background_color": "#f8f5ed",
+  "theme_color": "#102e46",
   "icons": [
     {
-      "src": "./icon.svg",
-      "sizes": "any",
+      "src": "./icon-nf.svg",
+      "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
