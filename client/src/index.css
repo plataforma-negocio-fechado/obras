@@ -62,7 +62,6 @@ button { cursor: pointer; }
   --radius: .65rem;
 }
 
-/* Identidade visual global: mantém componentes legados alinhados à paleta oficial. */
 .bg-brand-navy { background-color: var(--brand-navy); }
 .bg-brand-orange { background-color: var(--brand-orange); }
 .bg-brand-cream { background-color: var(--brand-cream); }
@@ -70,6 +69,23 @@ button { cursor: pointer; }
 .text-brand-orange { color: var(--brand-orange); }
 .text-brand-cream { color: var(--brand-cream); }
 .border-brand { border-color: var(--line); }
+
+/* Compatibilidade visual: módulos antigos continuam usando a identidade nova. */
+[class~="bg-[#102e46]"] { background-color: var(--brand-navy) !important; }
+[class~="bg-[#f8f5ed]"] { background-color: var(--brand-cream) !important; }
+[class~="bg-[#fffdf8]"] { background-color: var(--white) !important; }
+[class~="bg-[#f0ece3]"] { background-color: var(--mist) !important; }
+[class~="bg-[#d96b32]"] { background-color: var(--brand-orange) !important; }
+[class~="text-[#102e46]"] { color: var(--brand-navy) !important; }
+[class~="text-[#d96b32]"] { color: var(--brand-orange) !important; }
+[class~="text-[#617080]"] { color: var(--muted) !important; }
+[class~="text-[#fffdf8]"] { color: var(--white) !important; }
+[class~="border-[#102e46]"] { border-color: var(--brand-navy) !important; }
+[class~="border-[#d96b32]"] { border-color: var(--brand-orange) !important; }
+[class~="border-[#d8d2c5]"] { border-color: var(--line) !important; }
+[class~="ring-[#f0ece3]"] { --tw-ring-color: var(--mist) !important; }
+[class~="hover:bg-[#fffdf8]"]:hover { background-color: var(--white) !important; }
+[class~="hover:bg-[#bd5725]"]:hover { background-color: var(--orange-dark) !important; }
 
 @media (prefers-reduced-motion: no-preference) {
   button, a, [role="button"] { transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
