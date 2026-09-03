@@ -5,14 +5,17 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --ink: #102e46;
-  --orange: #d96b32;
-  --orange-dark: #bd5725;
-  --paper: #f8f5ed;
-  --mist: #f0ece3;
-  --line: #d8d2c5;
-  --muted: #617080;
-  --white: #fffdf8;
+  --brand-navy: #0B3047;
+  --brand-orange: #F15A24;
+  --brand-cream: #F5F1E9;
+  --ink: #0B3047;
+  --orange: #F15A24;
+  --orange-dark: #D94816;
+  --paper: #F5F1E9;
+  --mist: #EDE8DE;
+  --line: #D7D0C4;
+  --muted: #5E6870;
+  --white: #FFFDF9;
   --display: 'Cormorant Garamond', Georgia, serif;
   --body: 'Space Grotesk', Arial, sans-serif;
   --mono: 'Space Mono', monospace;
@@ -39,25 +42,34 @@ button { cursor: pointer; }
   --font-sans: 'Space Grotesk', Arial, sans-serif;
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'Space Mono', monospace;
-  --color-background: #f8f5ed;
-  --color-foreground: #102e46;
-  --color-card: #fffdf8;
-  --color-card-foreground: #102e46;
-  --color-popover: #fffdf8;
-  --color-popover-foreground: #102e46;
-  --color-primary: #102e46;
-  --color-primary-foreground: #fffdf8;
-  --color-secondary: #f0ece3;
-  --color-secondary-foreground: #102e46;
-  --color-muted: #f0ece3;
-  --color-muted-foreground: #617080;
-  --color-accent: #d96b32;
-  --color-accent-foreground: #fffdf8;
-  --color-border: #d8d2c5;
-  --color-input: #d8d2c5;
-  --color-ring: #d96b32;
-  --radius: .75rem;
+  --color-background: #F5F1E9;
+  --color-foreground: #0B3047;
+  --color-card: #FFFDF9;
+  --color-card-foreground: #0B3047;
+  --color-popover: #FFFDF9;
+  --color-popover-foreground: #0B3047;
+  --color-primary: #0B3047;
+  --color-primary-foreground: #FFFDF9;
+  --color-secondary: #EDE8DE;
+  --color-secondary-foreground: #0B3047;
+  --color-muted: #EDE8DE;
+  --color-muted-foreground: #5E6870;
+  --color-accent: #F15A24;
+  --color-accent-foreground: #FFFDF9;
+  --color-border: #D7D0C4;
+  --color-input: #D7D0C4;
+  --color-ring: #F15A24;
+  --radius: .65rem;
 }
+
+/* Identidade visual global: mantém componentes legados alinhados à paleta oficial. */
+.bg-brand-navy { background-color: var(--brand-navy); }
+.bg-brand-orange { background-color: var(--brand-orange); }
+.bg-brand-cream { background-color: var(--brand-cream); }
+.text-brand-navy { color: var(--brand-navy); }
+.text-brand-orange { color: var(--brand-orange); }
+.text-brand-cream { color: var(--brand-cream); }
+.border-brand { border-color: var(--line); }
 
 @media (prefers-reduced-motion: no-preference) {
   button, a, [role="button"] { transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
