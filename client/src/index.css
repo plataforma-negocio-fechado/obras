@@ -16,7 +16,6 @@
   --display: 'Cormorant Garamond', Georgia, serif;
   --body: 'Space Grotesk', Arial, sans-serif;
   --mono: 'Space Mono', monospace;
-
   font-family: var(--body);
   color: var(--ink);
   background: var(--paper);
@@ -34,8 +33,12 @@ button { cursor: pointer; }
 ::selection { background: var(--orange); color: white; }
 .font-mono, code { font-family: var(--mono); }
 .font-display { font-family: var(--display); }
+.font-sans { font-family: var(--body); }
 
 @theme inline {
+  --font-sans: 'Space Grotesk', Arial, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-mono: 'Space Mono', monospace;
   --color-background: #f8f5ed;
   --color-foreground: #102e46;
   --color-card: #fffdf8;
