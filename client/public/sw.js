@@ -1,4 +1,4 @@
-const CACHE_NAME = "negocio-fechado-shell-v9";
+const CACHE_NAME = "negocio-fechado-shell-v10";
 const APP_SHELL = ["./", "./index.html"];
 const BYPASS_PREFIXES = ["/api/", "/manus-storage/"];
 
