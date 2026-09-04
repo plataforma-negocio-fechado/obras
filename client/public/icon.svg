@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#0B3047"/><g fill="none" stroke-linecap="square" stroke-linejoin="miter"><path d="M45 132V68l76-24v64l-76 24Z" stroke="#F5F1E9" stroke-width="8"/><path d="M121 44v64" stroke="#F15A24" stroke-width="8"/><path d="M45 132l76-24" stroke="#F15A24" stroke-width="8"/><path d="M121 44l13-4v39" stroke="#F5F1E9" stroke-width="7"/></g><path d="M63 112V77h9l16 22V77h9v35h-9L72 91v21h-9Z" fill="#F5F1E9"/><path d="M102 77h22v8h-13v6h11v8h-11v13h-9V77Z" fill="#F15A24"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0B3047"/>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M108 405V178L389 94v227L108 405Z" stroke="#F5F1E9" stroke-width="24"/>
+    <path d="M389 94v227" stroke="#F15A24" stroke-width="24"/>
+    <path d="M108 405l281-84" stroke="#F15A24" stroke-width="24"/>
+    <path d="M389 94l43-13v108" stroke="#F5F1E9" stroke-width="20"/>
+  </g>
+  <!-- Monograma NF, desenhado como formas vetoriais para manter o desenho idêntico em qualquer aparelho -->
+  <path d="M151 318V214h25l52 67v-67h27v104h-25l-52-67v67h-27Z" fill="#F5F1E9"/>
+  <path d="M264 214h78v25h-50v17h43v24h-43v38h-28V214Z" fill="#F15A24"/>
+</svg>
