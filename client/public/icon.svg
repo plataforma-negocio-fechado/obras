@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="96" fill="#0B3047"/>
   <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
-    <path d="M108 405V178L389 94v227L108 405Z" stroke="#F5F1E9" stroke-width="24"/>
-    <path d="M389 94v227" stroke="#F15A24" stroke-width="24"/>
-    <path d="M108 405l281-84" stroke="#F15A24" stroke-width="24"/>
-    <path d="M389 94l43-13v108" stroke="#F5F1E9" stroke-width="20"/>
+    <path d="M128 386V174L384 98v212L128 386Z" stroke="#F5F1E9" stroke-width="22"/>
+    <path d="M384 98v212" stroke="#F15A24" stroke-width="22"/>
+    <path d="M128 386l256-76" stroke="#F15A24" stroke-width="22"/>
+    <path d="M384 98l34-10v86" stroke="#F5F1E9" stroke-width="18"/>
   </g>
-  <!-- Monograma NF, desenhado como formas vetoriais para manter o desenho idêntico em qualquer aparelho -->
-  <path d="M151 318V214h25l52 67v-67h27v104h-25l-52-67v67h-27Z" fill="#F5F1E9"/>
-  <path d="M264 214h78v25h-50v17h43v24h-43v38h-28V214Z" fill="#F15A24"/>
+  <!-- NF centralizado e totalmente dentro da moldura -->
+  <path d="M171 310V204h25l45 61v-61h27v106h-25l-45-61v61h-27Z" fill="#F5F1E9"/>
+  <path d="M275 204h62v25h-35v16h31v24h-31v41h-27V204Z" fill="#F15A24"/>
 </svg>
