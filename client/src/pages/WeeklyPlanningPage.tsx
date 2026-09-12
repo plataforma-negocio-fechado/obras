@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ArrowLeft, CalendarDays, Check, CircleDot, Plus, Target, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,77 +7,41 @@ import { Label } from "@/components/ui/label";
 import { useLocalProject, type LocalWeeklyTarget } from "@/localStore";
 import { usePilotLocation } from "@/pilotRouting";
 
-function mondayOf(date = new Date()) {
-  const d = new Date(date);
-  const day = d.getDay();
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(value: string, days: number) {
-  const d = new Date(`${value}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function formatDate(value: string) {
-  return new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-}
+function mondayOf(date = new Date()) { const d = new Date(date); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); return d.toISOString().slice(0, 10); }
+function addDays(value: string, days: number) { const d = new Date(`${value}T12:00:00`); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
+function date(value: string) { return new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }); }
 
 export default function WeeklyPlanningPage() {
-  const { project, upsertWeeklyTarget, deleteWeeklyTarget } = useLocalProject();
+  const { project, upsertWeeklyTarget, deleteWeeklyTarget, toggleAction } = useLocalProject();
   const [, navigate] = usePilotLocation();
   const [weekStart, setWeekStart] = useState(mondayOf());
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [frontId, setFrontId] = useState(project.fronts[0]?.id ?? "");
   const [planned, setPlanned] = useState("");
   const [note, setNote] = useState("");
-
   const weekEnd = addDays(weekStart, 6);
   const targets = useMemo(() => project.weeklyTargets.filter((item) => item.weekEnd === weekEnd), [project.weeklyTargets, weekEnd]);
+  const pendingActions = project.actions.filter((action) => !action.done).slice(0, 6);
+  const activeFronts = project.fronts.filter((front) => front.status !== "Não iniciada");
+  const plannedTotal = targets.reduce((sum, item) => sum + item.planned, 0);
+  const executedTotal = targets.reduce((sum, item) => { const front = project.fronts.find((f) => f.id === item.frontId); return sum + (front?.executed ?? 0); }, 0);
 
-  const resetForm = () => {
-    setEditingId(null);
-    setFrontId(project.fronts[0]?.id ?? "");
-    setPlanned("");
-    setNote("");
-  };
+  const save = () => { const value = Number(planned); if (!frontId || !Number.isFinite(value) || value <= 0) return; upsertWeeklyTarget({ frontId, weekEnd, planned: value, note: note.trim() }); setShowForm(false); setPlanned(""); setNote(""); };
+  const getPct = (target: LocalWeeklyTarget) => { const front = project.fronts.find((item) => item.id === target.frontId); return target.planned > 0 ? Math.min(100, Math.round(((front?.executed ?? 0) / target.planned) * 100)) : 0; };
 
-  const openEdit = (target: LocalWeeklyTarget) => {
-    setEditingId(target.id);
-    setFrontId(target.frontId);
-    setPlanned(String(target.planned));
-    setNote(target.note);
-    setShowForm(true);
-  };
+  return <main className="min-h-screen bg-brand-cream px-4 py-6 sm:px-7 lg:px-10 lg:py-8"><div className="mx-auto max-w-6xl">
+    <header className="mb-6 flex flex-col gap-4 border-b border-black/10 pb-5 md:flex-row md:items-end md:justify-between"><div><div className="flex items-center gap-2"><Button variant="outline" size="icon" onClick={() => navigate("/hoje")}><ArrowLeft className="h-4 w-4" /></Button><span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#737a7b]">Gestão da obra</span></div><h1 className="mt-3 font-display text-5xl font-semibold leading-none text-brand-navy">Planejamento semanal</h1><p className="mt-2 text-sm text-[#737a7b]">Transforme a semana em compromissos claros de produção e execução.</p></div><Button onClick={() => setShowForm(true)} className="bg-brand-navy text-white"><Plus className="mr-2 h-4 w-4" />Nova meta</Button></header>
 
-  const save = () => {
-    const value = Number(planned);
-    if (!frontId || !Number.isFinite(value) || value <= 0) return;
-    upsertWeeklyTarget({ frontId, weekEnd, planned: value, note: note.trim() });
-    setShowForm(false);
-    resetForm();
-  };
+    <section className="grid gap-3 sm:grid-cols-3"><Card className="border-brand bg-white shadow-[4px_4px_0_#d7d0c4]"><CardContent className="p-5"><Kicker>Semana</Kicker><div className="mt-2 flex items-center gap-2"><CalendarDays className="h-5 w-5" /><Input type="date" value={weekStart} onChange={(e) => setWeekStart(mondayOf(new Date(`${e.target.value}T12:00:00`)))} /></div><p className="mt-2 text-xs text-[#737a7b]">{date(weekStart)} — {date(weekEnd)}</p></CardContent></Card><Metric label="Metas" value={String(targets.length)} detail={`${plannedTotal} unidades planejadas`} /><Metric label="Executado" value={String(executedTotal)} detail="Produção acumulada nas frentes" /></section>
 
-  const getExecuted = (target: LocalWeeklyTarget) => project.diaries
-    .filter((diary) => diary.frontId === target.frontId && diary.date.slice(0, 10) >= addDays(weekEnd, -6) && diary.date.slice(0, 10) <= weekEnd)
-    .reduce((sum, diary) => sum + (Number(diary.production) || 0), 0);
+    <section className="mt-7"><div className="mb-3"><Kicker>Ritmo da semana</Kicker><h2 className="mt-1 font-display text-3xl font-semibold text-brand-navy">Plano por frente</h2></div>{targets.length ? <div className="grid gap-4 md:grid-cols-2">{targets.map((target) => { const front = project.fronts.find((item) => item.id === target.frontId); const pct = getPct(target); return <Card key={target.id} className="border-brand bg-white shadow-[4px_4px_0_#d7d0c4]"><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><Kicker>{front?.code ?? "Frente"}</Kicker><h3 className="mt-1 text-base font-bold text-brand-navy">{front?.name ?? "Frente removida"}</h3></div><span className="rounded-full bg-[#F5F1E9] px-2.5 py-1 text-xs font-bold text-brand-navy">{pct}%</span></div><div className="mt-4 flex justify-between text-xs"><span>Executado: <b>{front?.executed ?? 0} {front?.unit ?? "un"}</b></span><span>Meta: <b>{target.planned} {front?.unit ?? "un"}</b></span></div><div className="mt-2 h-3 bg-[#dedfd9]"><div className="h-3 bg-[#8da65a]" style={{ width: `${pct}%` }} /></div>{target.note && <p className="mt-3 rounded-lg bg-[#F5F1E9] p-3 text-xs leading-5 text-[#606769]">{target.note}</p>}<div className="mt-4 flex justify-end"><Button variant="ghost" size="sm" onClick={() => deleteWeeklyTarget(target.id)}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Excluir meta</Button></div></CardContent></Card>; })}</div> : <Card className="border-brand bg-white"><CardContent className="p-8 text-center"><Target className="mx-auto h-8 w-8 text-[#737a7b]" /><h3 className="mt-3 font-semibold text-brand-navy">A semana ainda não tem metas</h3><p className="mt-1 text-sm text-[#737a7b]">Comece pela frente que realmente precisa entregar resultado.</p><Button className="mt-4" onClick={() => setShowForm(true)}>Criar primeira meta</Button></CardContent></Card>}</section>
 
-  return <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
-    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <p className="text-[10px] uppercase tracking-[0.18em] text-[#858a82]">Planejamento</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Planejamento semanal</h1>
-        <p className="mt-1 text-sm text-[#70756e]">Defina as metas da semana e acompanhe a execução.</p>
-      </div>
-      <div className="flex gap-2"><Button variant="outline" onClick={() => navigate("/hoje")}>Hoje</Button><Button onClick={() => { resetForm(); setShowForm(true); }}>+ Nova meta</Button></div>
-    </div>
+    <section className="mt-7 grid gap-6 lg:grid-cols-[1fr_1fr]"><div><div className="mb-3"><Kicker>Agenda</Kicker><h2 className="mt-1 font-display text-3xl font-semibold text-brand-navy">A semana em dias</h2></div><Card className="border-brand bg-white"><CardContent className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4 lg:grid-cols-7">{Array.from({ length: 7 }, (_, index) => { const day = addDays(weekStart, index); const events = project.events.filter((event) => event.date.slice(0, 10) === day).length; return <div key={day} className="rounded-lg bg-[#F5F1E9] p-3"><p className="text-[10px] font-bold uppercase text-[#737a7b]">{date(day).split(",")[0]}</p><p className="mt-1 text-lg font-semibold text-brand-navy">{date(day).split(",")[1]}</p><p className="mt-2 text-[10px] text-[#737a7b]">{events} evento(s)</p></div>; })}</CardContent></Card></div>
 
-    <Card className="rounded-none border-0 bg-[#f6f6f3] shadow-[4px_4px_0_#d0d1cb]"><CardContent className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"><div><p className="text-[10px] uppercase tracking-[0.14em] text-[#858a82]">Semana</p><p className="text-lg font-medium">{formatDate(weekStart)} — {formatDate(weekEnd)}</p></div><Input className="max-w-[190px] bg-white" type="date" value={weekStart} onChange={(e) => setWeekStart(mondayOf(new Date(`${e.target.value}T12:00:00`)))} /></CardContent></Card>
+    <div><div className="mb-3"><Kicker>Execução</Kicker><h2 className="mt-1 font-display text-3xl font-semibold text-brand-navy">Ações da semana</h2></div><Card className="border-brand bg-white"><CardContent className="p-0">{pendingActions.length ? <div className="divide-y divide-black/10">{pendingActions.map((action) => <button key={action.id} type="button" onClick={() => toggleAction(action.id)} className="flex w-full items-start gap-3 p-4 text-left hover:bg-[#F5F1E9]/60"><CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-[#d89b45]" /><span className="flex-1 text-sm text-brand-navy">{action.title}<span className="mt-1 block text-[10px] uppercase tracking-wide text-[#737a7b]">{action.owner} · {action.due}</span></span><Check className="h-4 w-4 text-[#8da65a]" /></button>)}</div> : <CardContent className="p-6 text-sm text-[#737a7b]">Nenhuma ação pendente.</CardContent>}</CardContent></Card></div></section>
 
-    {showForm && <Card className="rounded-none border-0 bg-white shadow-[4px_4px_0_#d0d1cb]"><CardContent className="space-y-4 p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{editingId ? "Alterar meta" : "Nova meta semanal"}</h2><Button variant="ghost" onClick={() => { setShowForm(false); resetForm(); }}>Fechar</Button></div><div className="grid gap-4 md:grid-cols-2"><div><Label>Frente</Label><select className="mt-1 h-10 w-full border bg-white px-3 text-sm" value={frontId} onChange={(e) => setFrontId(e.target.value)}>{project.fronts.map((front) => <option key={front.id} value={front.id}>{front.name}</option>)}</select></div><div><Label>Meta / quantidade planejada</Label><Input className="mt-1" type="number" min="0" value={planned} onChange={(e) => setPlanned(e.target.value)} placeholder="Ex.: 330" /></div><div className="md:col-span-2"><Label>Observação (opcional)</Label><Input className="mt-1" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: concluir trecho triplo até sexta" /></div></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button><Button onClick={save}>Salvar planejamento</Button></div></CardContent></Card>}
-
-    <div className="space-y-4">{targets.map((target) => { const front = project.fronts.find((item) => item.id === target.frontId); const executed = getExecuted(target); const pct = target.planned > 0 ? Math.min(100, Math.round((executed / target.planned) * 100)) : 0; return <Card key={target.id} className="rounded-none border-0 bg-[#f6f6f3] shadow-[4px_4px_0_#d0d1cb]"><CardContent className="p-5"><div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><p className="text-[10px] uppercase tracking-[0.14em] text-[#858a82]">{front?.name ?? "Frente"}</p><h2 className="mt-1 text-lg font-semibold">Meta semanal: {target.planned} {front?.unit ?? "un"}</h2><p className="mt-1 text-sm text-[#70756e]">Executado: {executed} {front?.unit ?? "un"} · Faltam: {Math.max(0, target.planned - executed)} {front?.unit ?? "un"}</p>{target.note && <p className="mt-2 text-sm text-[#70756e]">{target.note}</p>}</div><div className="flex gap-2"><Button variant="outline" onClick={() => openEdit(target)}>Alterar</Button><Button variant="ghost" onClick={() => deleteWeeklyTarget(target.id)}>Excluir</Button></div></div><div className="mt-4 h-3 w-full bg-[#dedfd9]"><div className="h-3 bg-[#8da65a]" style={{ width: `${pct}%` }} /></div><div className="mt-2 flex justify-between text-[10px] uppercase tracking-[0.12em] text-[#858a82]"><span>{pct}% da meta</span><span>{target.weekEnd}</span></div></CardContent></Card>; })}{targets.length === 0 && !showForm && <Card className="rounded-none border-0 bg-[#f6f6f3]"><CardContent className="p-8 text-center text-sm text-[#70756e]">Nenhuma meta definida para esta semana.<div className="mt-4"><Button onClick={() => { resetForm(); setShowForm(true); }}>+ Criar primeira meta</Button></div></CardContent></Card>}</div>
-  </div>;
+    {showForm && <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-navy/30 p-3 sm:items-center"><Card className="w-full max-w-xl border-brand bg-white shadow-[8px_8px_0_#d7d0c4]"><CardContent className="p-6"><Kicker>Nova meta</Kicker><h2 className="mt-1 font-display text-3xl font-semibold text-brand-navy">O que precisa ser entregue?</h2><div className="mt-5 space-y-4"><div><Label>Frente</Label><select className="mt-1 h-11 w-full rounded-md border border-brand/15 bg-white px-3 text-sm" value={frontId} onChange={(e) => setFrontId(e.target.value)}>{activeFronts.map((front) => <option key={front.id} value={front.id}>{front.code} · {front.name}</option>)}</select></div><div><Label>Meta quantitativa</Label><Input className="mt-1 h-11" type="number" min="0" value={planned} onChange={(e) => setPlanned(e.target.value)} placeholder="Ex.: 150" /></div><div><Label>Compromisso / estratégia</Label><Input className="mt-1 h-11" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: concluir trecho até sexta e liberar para assentamento" /></div></div><div className="mt-6 flex justify-end gap-2"><Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button><Button disabled={!frontId || !Number(planned)} onClick={save} className="bg-brand-navy text-white">Salvar meta</Button></div></CardContent></Card></div>}
+  </div></main>;
 }
+function Kicker({ children }: { children: React.ReactNode }) { return <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#737a7b]">{children}</p>; }
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) { return <Card className="border-brand bg-white shadow-[4px_4px_0_#d7d0c4]"><CardContent className="p-5"><Kicker>{label}</Kicker><p className="mt-2 text-3xl font-semibold tracking-tight text-brand-navy">{value}</p><p className="mt-1 text-xs text-[#737a7b]">{detail}</p></CardContent></Card>; }
