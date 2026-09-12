@@ -8,16 +8,21 @@ export type FieldCandidate = {
   fields: Record<string, string>;
 };
 
-const money = /R\$\s?([\d.]+(?:,\d{1,2})?)/i;
+const money = /(?:r\$\s*)?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/i;
 const quantityPattern = /\b(\d+(?:[,.]\d+)?)\s*(carradas?|cargas?|ca[cç]ambas?|unidades?|und(?:\.)?|tubos?|sacos?|m[³3]|m2|m²|m|toneladas?|ton|kg|litros?|l)\b/i;
 
 function normalize(text: string) {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function short(text: string, max = 160) {
+  return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+}
+
 function extractMoney(text: string) {
-  const match = text.match(money);
-  return match?.[1] ? `R$ ${match[1]}` : undefined;
+  const match = text.match(/r\$\s*([\d.]+(?:,\d{1,2})?)/i);
+  if (!match?.[1]) return undefined;
+  return `R$ ${match[1]}`;
 }
 
 function extractQuantity(text: string) {
@@ -27,22 +32,26 @@ function extractQuantity(text: string) {
 }
 
 function extractMachine(normalized: string) {
-  const match = normalized.match(/\b(pc|patrol|escavadeira|retroescavadeira|caminhao|caminhão|trator|motoniveladora|rolo)\b/);
-  if (!match) return normalized.includes("maquina") || normalized.includes("equipamento") ? "Equipamento não especificado" : undefined;
-  return match[1].toUpperCase();
-}
-
-function short(text: string, max = 140) {
-  return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+  const aliases: Array<[RegExp, string]> = [
+    [/\bpc\b/, "PC"],
+    [/\bpatrol\b/, "PATROL"],
+    [/\bescavadeira\b/, "ESCAVADEIRA"],
+    [/\bretroescavadeira\b/, "RETROESCAVADEIRA"],
+    [/\bcaminhao\b/, "CAMINHÃO"],
+    [/\btrator\b/, "TRATOR"],
+    [/\bmotoniveladora\b/, "MOTONIVELADORA"],
+    [/\brolo\b/, "ROLO"],
+  ];
+  return aliases.find(([pattern]) => pattern.test(normalized))?.[1];
 }
 
 function extractReason(text: string) {
-  const match = text.match(/(?:porque|pq|por causa de|devido a)\s+(.+?)(?:[.!?]|$)/i);
+  const match = text.match(/(?:porque|pq|por causa de|devido a|em raz[aã]o de)\s+(.+?)(?:[.!?]|$)/i);
   return match?.[1]?.trim();
 }
 
 function extractFront(normalized: string) {
-  const match = normalized.match(/(?:na|no|para a|para o|da|do)\s+(drenagem|escavacao|aterro|pavimentacao|pavimenta[cç]ao|limpeza|obra|servico)/i);
+  const match = normalized.match(/(?:na|no|para a|para o|da|do|frente)\s+(drenagem|escavacao|aterro|pavimentacao|limpeza|obra|servico|terraplenagem|sinalizacao)/i);
   return match?.[1];
 }
 
@@ -54,17 +63,28 @@ function extractDuration(text: string) {
   return match[2].startsWith("min") ? String(value / 60) : String(value);
 }
 
+function isCost(normalized: string) {
+  return /\b(paguei|pagamento|comprei|compra|custou|gastei|despesa|nota|orcamento|abasteci|abastecimento|combustivel|diesel|gasolina)\b/.test(normalized);
+}
+
+function isMaterial(normalized: string) {
+  return /\b(brita|areia|cimento|tubo|tubos|manilha|manilhas|concreto|aco|ferro|material|insumo|cascalho|piçarra|picarra|pedra|britas)\b/.test(normalized);
+}
+
+function isProblem(normalized: string) {
+  return /\b(problema|travou|parado|parada|atraso|nao veio|nao chegou|nao bate|diverg|erro|pendencia|faltando|aguardando|impedi|estourou|quebrou|defeito|falha|interromp)\b/.test(normalized);
+}
+
+function isAction(normalized: string) {
+  return /\b(precisa|precisamos|providenciar|verificar|comprar|enviar|resolver|ligar|confirmar|cobrar|agendar|programar|solicitar|fazer|corrigir|acompanhar)\b/.test(normalized);
+}
+
 /**
  * Motor local do Campo.
  *
- * A mensagem chega em linguagem livre e sai como candidatos estruturados.
- * Nenhum candidato é gravado automaticamente: a confirmação é a fronteira
- * entre interpretação e dado de gestão.
- *
- * Este motor é deliberadamente determinístico para funcionar também no
- * GitHub Pages, sem expor chave de IA no navegador. Quando uma API de IA
- * estiver disponível, FieldPage pode continuar usando-a como primeira opção
- * e cair aqui como fallback.
+ * Linguagem livre -> candidatos estruturados -> revisão humana.
+ * Nada aqui grava na gestão. A confirmação fica apenas no histórico local
+ * enquanto o backend e as integrações são construídos em uma etapa posterior.
  */
 export function suggestFieldRecords(text: string): FieldCandidate[] {
   const clean = text.trim();
@@ -78,41 +98,34 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
   const reason = extractReason(clean);
   const candidates: FieldCandidate[] = [];
 
-  const hasFuelCost = Boolean(value && /abastec|combustivel|gasolina|diesel|posto/.test(n));
-  const hasMaterial = /brita|areia|cimento|tubo|manilha|concreto|aco|ferro|material|insumo|ca[cç]amba/.test(n);
-  const hasProblem = /problema|travou|parad[ao]|atraso|nao veio|nao chegou|nao bate|diverg|erro|pendencia|faltando|aguardando|imped|estourou|quebrou|defeito|falha/.test(n);
-
-  // 1. Custos explícitos.
-  if (value && (hasFuelCost || /pag(?:uei|amento)|compr(?:ei|a)|custou|gastei|despesa|nota|or[cç]amento/.test(n))) {
-    const description = hasFuelCost
-      ? `Abastecimento${machine ? ` da ${machine}` : ""}`
-      : short(clean, 90);
-
+  // Custo explícito.
+  if (value && isCost(n)) {
+    const fuel = /abastec|combustivel|gasolina|diesel/.test(n);
+    const description = fuel ? `Abastecimento${machine ? ` da ${machine}` : ""}` : short(clean, 90);
     candidates.push({
       type: "custo",
       title: description,
       summary: [machine, value].filter(Boolean).join(" · ") || "Despesa identificada",
-      confidence: hasFuelCost ? 0.98 : 0.90,
+      confidence: fuel ? 0.98 : 0.92,
       fields: {
-        categoria: hasFuelCost ? "combustível" : "despesa",
+        categoria: fuel ? "combustível" : "despesa",
         ...(machine ? { equipamento: machine } : {}),
-        valor: value!,
+        valor: value,
       },
     });
   }
 
-  // 2. Materiais recebidos/comprados.
-  if (hasMaterial) {
-    const materialMatch = clean.match(/(?:brita|areia|cimento|tubos?|manilhas?|concreto|a[cç]o|ferro|material|insumo)(?:\s+de\s+[^,.!?;]+)?/i);
+  // Material, principalmente quando existe recebimento/entrega/compra.
+  if (isMaterial(n)) {
+    const materialMatch = clean.match(/(?:brita|areia|cimento|tubos?|manilhas?|concreto|a[cç]o|ferro|material|insumo|cascalho|pi[cç]arra|pedra)(?:\s+de\s+[^,.!?;]+)?/i);
     const material = materialMatch?.[0]?.trim() || "Material/insumo mencionado";
     const quantityText = quantity ? `${quantity.quantity} ${quantity.unit}` : undefined;
     const receiving = /receb|chegou|chegaram|entreg|compr|trouxe|descarreg/.test(n);
-
     candidates.push({
       type: "material",
       title: receiving ? "Material recebido" : "Material identificado",
       summary: [material, quantityText, front && `frente: ${front}`].filter(Boolean).join(" · "),
-      confidence: quantity ? 0.96 : 0.88,
+      confidence: quantity ? 0.97 : 0.88,
       fields: {
         descricao: material,
         ...(quantity ? { quantidade: quantity.quantity, unidade: quantity.unit } : {}),
@@ -121,7 +134,7 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // 3. Equipe com cargos e quantidades explícitas.
+  // Equipe com quantidade por função.
   const teamMatches = Array.from(n.matchAll(/\b(\d+)\s+(operador(?:es)?|pedreiro(?:s)?|ajudante(?:s)?|servente(?:s)?|encarregado(?:s)?|topografo(?:s)?)\b/g));
   if (teamMatches.length) {
     const roles = teamMatches.map((match) => `${match[2]}: ${match[1]}`).join(" · ");
@@ -129,7 +142,7 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
       type: "equipe",
       title: "Equipe em campo",
       summary: [roles, front && `frente: ${front}`].filter(Boolean).join(" · "),
-      confidence: 0.95,
+      confidence: 0.96,
       fields: {
         equipe: roles,
         ...(front ? { frente: front } : {}),
@@ -137,25 +150,22 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // 4. Evento de máquina. Abastecimento isolado não vira máquina para evitar duplicidade.
-  const hasMachineEvent = Boolean(
-    machine && /parad[ao]|rodou|chegou|hora[s]?|quebrou|estourou|defeito|problema|manutenc|funcion|uso|operou/.test(n),
-  );
-  if (hasMachineEvent && !hasFuelCost) {
+  // Evento de máquina. Abastecimento não duplica como evento de máquina.
+  const hasMachineEvent = Boolean(machine && /parad[ao]|rodou|chegou|hora[s]?|quebrou|estourou|defeito|problema|manutenc|funcion|uso|operou|bomba/.test(n));
+  if (hasMachineEvent && !value || (hasMachineEvent && !/abastec|combustivel|diesel|gasolina/.test(n))) {
     const durationHours = extractDuration(clean);
-    const event = /parad[ao]|nao rodou/.test(n)
+    const event = /parad[ao]|nao rodou|interromp/.test(n)
       ? "parada"
       : /chegou/.test(n)
         ? "chegada"
-        : /quebrou|estourou|defeito|problema|manutenc|falha/.test(n)
+        : /quebrou|estourou|defeito|problema|manutenc|falha|bomba/.test(n)
           ? "falha/manutenção"
           : "uso de máquina";
-
     candidates.push({
       type: "maquina",
       title: "Evento de máquina",
       summary: [machine, event, durationHours ? `${durationHours} h` : undefined, reason].filter(Boolean).join(" · "),
-      confidence: durationHours || reason ? 0.95 : 0.88,
+      confidence: durationHours || reason ? 0.96 : 0.89,
       fields: {
         equipamento: machine!,
         evento: event,
@@ -165,14 +175,14 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // 5. Ocorrência: problemas que afetam execução ou prazo.
-  if (hasProblem) {
-    const impact = /parad[ao]|nao rodou|imped/.test(n) ? "serviço/máquina parado" : "execução impactada";
+  // Ocorrência: qualquer problema que afete execução, equipamento ou prazo.
+  if (isProblem(n)) {
+    const impact = /parad[ao]|nao rodou|impedi|interromp/.test(n) ? "serviço/máquina parado" : "execução impactada";
     candidates.push({
       type: "ocorrencia",
       title: "Ocorrência identificada",
       summary: short(clean),
-      confidence: reason || /parad[ao]|quebrou|falha/.test(n) ? 0.94 : 0.88,
+      confidence: reason || /parad[ao]|quebrou|falha/.test(n) ? 0.95 : 0.88,
       fields: {
         descricao: clean,
         impacto: impact,
@@ -181,8 +191,8 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // 6. Ações explícitas.
-  if (/precisa|providenciar|verificar|comprar|enviar|resolver|ligar|confirmar|cobrar|agendar|programar|solicitar/.test(n)) {
+  // Ação explícita ou implícita de acompanhamento.
+  if (isAction(n)) {
     candidates.push({
       type: "acao",
       title: "Ação sugerida",
@@ -195,13 +205,13 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // 7. Fallback: toda mensagem útil vira diário, em vez de desaparecer.
+  // Produção/serviço tende a ser diário quando não há categoria específica.
   if (candidates.length === 0) {
     candidates.push({
       type: "diario",
       title: "Registro de campo",
       summary: short(clean),
-      confidence: 0.70,
+      confidence: 0.72,
       fields: {
         relato: clean,
         ...(front ? { frente: front } : {}),
