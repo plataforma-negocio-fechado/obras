@@ -1,90 +1,31 @@
 import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Check, ImagePlus, Mic, Pencil, Send, Sparkles, Square, Trash2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Camera, ImagePlus, Mic, Square, Trash2, Send, Clock, Sparkles, Check, Pencil, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { usePilotLocation } from "@/pilotRouting";
 import { suggestFieldRecords, type FieldCandidate } from "@/fieldIntelligence";
+import { addMemoryEvent, type MemoryEvidence } from "@/operationalMemory";
 
 type FieldEntry = {
   id: string;
   createdAt: string;
   text: string;
-  audioName?: string;
-  audioDataUrl?: string;
+  audio?: { name: string; dataUrl: string };
   images: { name: string; dataUrl: string }[];
-  status: "pendente" | "organizado";
-  candidates?: FieldCandidate[];
-  aiSource?: "ia" | "local";
+  candidates: FieldCandidate[];
+  source: "ia" | "local";
 };
 
 const STORAGE_KEY = "obras-field-lab-entries";
+const typeLabel: Record<FieldCandidate["type"], string> = { custo: "Custo", material: "Material", maquina: "Máquina", equipe: "Equipe", ocorrencia: "Ocorrência", acao: "Ação", diario: "Diário" };
 
-const typeLabel: Record<FieldCandidate["type"], string> = {
-  custo: "Custo",
-  material: "Material",
-  maquina: "Máquina",
-  equipe: "Equipe",
-  ocorrencia: "Ocorrência",
-  acao: "Ação",
-  diario: "Diário",
-};
+function makeId(prefix: string) { if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}-${crypto.randomUUID()}`; return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
+function readEntries(): FieldEntry[] { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); return Array.isArray(value) ? value : []; } catch { return []; } }
+function fileToDataUrl(file: File) { return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); }); }
+function formatDate(value: string) { return new Date(value).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
 
-const typeTone: Record<FieldCandidate["type"], string> = {
-  custo: "bg-[#0B3047] text-white",
-  material: "bg-[#0B3047] text-white",
-  maquina: "bg-[#F15A24] text-white",
-  equipe: "bg-[#6F8E3E] text-white",
-  ocorrencia: "bg-[#B34A43] text-white",
-  acao: "bg-[#7A6B4D] text-white",
-  diario: "bg-[#697278] text-white",
-};
-
-function makeId(prefix: string) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}-${crypto.randomUUID()}`;
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function readEntries(): FieldEntry[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function confidenceLabel(value: number) {
-  return `${Math.round(value * 100)}% confiança`;
-}
-
-/**
- * Campo em modo laboratório.
- *
- * Esta fase valida o motor: entrada livre -> interpretação -> candidatos ->
- * revisão -> confirmação. Nada é enviado para custos, materiais, máquinas,
- * equipe, diário, ações ou ocorrências do módulo Obras.
- */
 export default function FieldPage() {
   const [, navigate] = usePilotLocation();
   const [text, setText] = useState("");
@@ -92,397 +33,91 @@ export default function FieldPage() {
   const [audio, setAudio] = useState<{ name: string; dataUrl: string } | null>(null);
   const [entries, setEntries] = useState<FieldEntry[]>(readEntries);
   const [candidates, setCandidates] = useState<FieldCandidate[]>([]);
-  const [candidateSource, setCandidateSource] = useState<"ia" | "local" | null>(null);
+  const [source, setSource] = useState<"ia" | "local" | null>(null);
   const [organizing, setOrganizing] = useState(false);
   const [recording, setRecording] = useState(false);
   const [editing, setEditing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  }, [entries]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }, [entries]);
 
-  const resetComposer = () => {
-    setText("");
-    setImages([]);
-    setAudio(null);
-    setCandidates([]);
-    setCandidateSource(null);
-    setEditing(false);
-  };
+  const reset = () => { setText(""); setImages([]); setAudio(null); setCandidates([]); setSource(null); setEditing(false); };
 
   const addImages = async (files: FileList | null) => {
     if (!files?.length) return;
-    try {
-      const selected = Array.from(files).slice(0, 8);
-      const converted = await Promise.all(
-        selected.map(async (file) => ({ name: file.name, dataUrl: await fileToDataUrl(file) })),
-      );
-      setImages((current) => [...current, ...converted].slice(0, 8));
-      toast.success(`${converted.length} foto${converted.length > 1 ? "s" : ""} adicionada${converted.length > 1 ? "s" : ""}`);
-    } catch {
-      toast.error("Não foi possível carregar uma das imagens");
-    }
+    const selected = Array.from(files).slice(0, 8);
+    try { const converted = await Promise.all(selected.map(async (file) => ({ name: file.name, dataUrl: await fileToDataUrl(file) }))); setImages((current) => [...current, ...converted].slice(0, 8)); toast.success(`${converted.length} foto(s) adicionada(s)`); } catch { toast.error("Não foi possível carregar a imagem"); }
   };
 
   const startRecording = async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      toast.error("Seu navegador não permite gravação de áudio");
-      return;
-    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { toast.error("Seu navegador não permite gravação de áudio"); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
-      recorder.ondataavailable = (event) => {
-        if (event.data.size) chunksRef.current.push(event.data);
-      };
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop());
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        const file = new File(
-          [blob],
-          `audio-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`,
-          { type: blob.type },
-        );
-        setAudio({ name: file.name, dataUrl: await fileToDataUrl(file) });
-        toast.success("Áudio recebido. Nesta fase ele fica como evidência local.");
-      };
-      recorder.start();
-      setRecording(true);
-    } catch {
-      toast.error("Não foi possível acessar o microfone");
-    }
+      recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
+      recorder.onstop = async () => { stream.getTracks().forEach((track) => track.stop()); const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" }); const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type }); setAudio({ name: file.name, dataUrl: await fileToDataUrl(file) }); toast.success("Áudio salvo como evidência"); };
+      recorder.start(); setRecording(true);
+    } catch { toast.error("Não foi possível acessar o microfone"); }
   };
-
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
-  };
+  const stopRecording = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
 
   const organize = async () => {
-    if (!text.trim()) {
-      toast.error("Escreva a informação do campo para testar a organização");
-      return;
-    }
-    setOrganizing(true);
-    setEditing(false);
-
-    // O backend de IA continua como primeira opção quando estiver disponível.
-    // No GitHub Pages, o motor local assume sem exigir servidor ou chave no navegador.
+    if (!text.trim()) { toast.error("Escreva a informação para a IA organizar"); return; }
+    setOrganizing(true); setEditing(false);
     try {
-      const response = await fetch("/api/field/organize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim() }),
-      });
+      const response = await fetch("/api/field/organize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text.trim() }) });
       if (!response.ok) throw new Error("API indisponível");
       const payload = await response.json() as { candidates?: FieldCandidate[] };
       if (!Array.isArray(payload.candidates)) throw new Error("Resposta inválida");
-      setCandidates(payload.candidates);
-      setCandidateSource("ia");
-      toast.success("IA organizou a informação. Revise antes de confirmar.");
+      setCandidates(payload.candidates); setSource("ia"); toast.success("IA organizou a informação. Revise antes de confirmar.");
     } catch {
-      const local = suggestFieldRecords(text);
-      setCandidates(local);
-      setCandidateSource("local");
-      if (local.length) toast.success("Motor local organizou a informação. Revise antes de confirmar.");
-      else toast.info("Não encontrei informações estruturáveis nessa mensagem");
-    } finally {
-      setOrganizing(false);
-    }
+      const local = suggestFieldRecords(text); setCandidates(local); setSource("local");
+      if (local.length) toast.success("Motor local organizou a informação. Revise antes de confirmar."); else toast.info("Não encontrei informações estruturáveis.");
+    } finally { setOrganizing(false); }
   };
 
-  const saveCurrentEntry = (status: FieldEntry["status"]) => {
-    if (!text.trim() && !audio && images.length === 0) return null;
-    const entry: FieldEntry = {
-      id: makeId("field"),
-      createdAt: new Date().toISOString(),
-      text: text.trim(),
-      audioName: audio?.name,
-      audioDataUrl: audio?.dataUrl,
-      images,
-      status,
-      candidates,
-      aiSource: candidateSource ?? undefined,
-    };
-    setEntries((current) => [entry, ...current]);
-    return entry.id;
+  const updateCandidate = (index: number, key: string, value: string) => setCandidates((current) => current.map((candidate, i) => i === index ? { ...candidate, fields: { ...candidate.fields, [key]: value } } : candidate));
+
+  const confirm = () => {
+    if (!candidates.length && !text.trim() && !audio && !images.length) { toast.error("Adicione uma informação primeiro"); return; }
+    const primary = candidates[0];
+    const title = primary?.title || "Registro de campo";
+    const summary = primary?.summary || text.trim() || "Entrada de campo com evidências.";
+    const evidence: MemoryEvidence[] = [];
+    if (text.trim()) evidence.push({ id: makeId("evidence"), type: "texto", name: "Relato original", dataUrl: undefined });
+    if (audio) evidence.push({ id: makeId("evidence"), type: "audio", name: audio.name, dataUrl: audio.dataUrl });
+    images.forEach((image) => evidence.push({ id: makeId("evidence"), type: "foto", name: image.name, dataUrl: image.dataUrl }));
+    addMemoryEvent({ type: primary?.type === "maquina" ? "máquina" : primary?.type ?? "diário", title, summary, source: "campo", confirmed: true, evidence, metadata: primary?.fields as Record<string, string | number | undefined> | undefined });
+    setEntries((current) => [{ id: makeId("field"), createdAt: new Date().toISOString(), text: text.trim(), audio: audio ?? undefined, images, candidates, source: source ?? "local" }, ...current]);
+    toast.success("Evento confirmado e incorporado à memória da obra");
+    reset();
   };
 
-  const sendForOrganization = () => {
-    if (!text.trim() && !audio && images.length === 0) {
-      toast.error("Adicione texto, áudio ou foto antes de enviar");
-      return;
-    }
-    if (!text.trim()) {
-      const id = saveCurrentEntry("organizado");
-      if (id) toast.success("Evidência salva no laboratório local");
-      resetComposer();
-      return;
-    }
-    if (!candidates.length) {
-      void organize();
-      return;
-    }
-    const id = saveCurrentEntry("pendente");
-    if (id) toast.success("Informação preparada para revisão");
-  };
+  const revise = (entry: FieldEntry) => { setText(entry.text); setImages(entry.images); setAudio(entry.audio ?? null); setCandidates(entry.candidates); setSource(entry.source); setEditing(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const remove = (id: string) => setEntries((current) => current.filter((entry) => entry.id !== id));
 
-  const confirmOrganization = () => {
-    if (!candidates.length) return;
-    const id = saveCurrentEntry("organizado");
-    if (id) {
-      toast.success("Organização confirmada — mantida apenas no laboratório local");
-      resetComposer();
-    }
-  };
+  return <main className="min-h-screen bg-brand-cream px-4 py-5 sm:px-7 lg:px-10 lg:py-8"><div className="mx-auto max-w-5xl">
+    <header className="mb-6 flex items-center justify-between gap-4 border-b border-black/10 pb-5"><div className="flex items-center gap-3"><Button variant="outline" size="icon" onClick={() => navigate("/hoje")}><ArrowLeft className="h-4 w-4" /></Button><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#737a7b]">Campo · entrada operacional</p><h1 className="mt-1 font-display text-4xl font-semibold leading-none text-brand-navy">Como foi o dia?</h1></div></div><Button variant="outline" onClick={() => navigate("/hoje")}>Voltar à obra</Button></header>
 
-  const reviseEntry = (entry: FieldEntry) => {
-    setText(entry.text);
-    setImages(entry.images);
-    setAudio(entry.audioName && entry.audioDataUrl ? { name: entry.audioName, dataUrl: entry.audioDataUrl } : null);
-    setCandidates(entry.candidates ?? []);
-    setCandidateSource(entry.aiSource ?? "local");
-    setEditing(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const deleteEntry = (id: string) => {
-    setEntries((current) => current.filter((entry) => entry.id !== id));
-    toast.success("Registro removido");
-  };
-
-  const updateCandidateField = (candidateIndex: number, key: string, value: string) => {
-    setCandidates((current) => current.map((candidate, index) =>
-      index === candidateIndex
-        ? { ...candidate, fields: { ...candidate.fields, [key]: value } }
-        : candidate,
-    ));
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F5F1E9] px-4 py-5 sm:px-8">
-      <div className="mx-auto max-w-3xl space-y-5">
-        <header className="flex items-center gap-3 border-b border-[#0B3047]/15 pb-4">
-          <Button variant="outline" size="icon" onClick={() => navigate("/obras")} aria-label="Voltar">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.28em] text-[#F15A24]">Negócio Fechado · Obras</p>
-            <h1 className="font-serif text-3xl text-[#0B3047] sm:text-4xl">Operação de campo</h1>
-          </div>
-        </header>
-
-        <Card className="overflow-hidden border-[#0B3047]/15 bg-white shadow-[8px_8px_0_rgba(11,48,71,0.08)]">
-          <CardContent className="p-5 sm:p-7">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-[#697278]">Laboratório do Campo</p>
-                <h2 className="mt-2 font-serif text-3xl text-[#0B3047]">Jogue aqui o que aconteceu.</h2>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-[#697278]">
-                  Escreva como você falaria na obra. O motor tenta separar a informação em registros úteis para você revisar.
-                </p>
-              </div>
-              <div className="hidden rounded-sm bg-[#F15A24]/10 p-3 sm:block">
-                <Sparkles className="h-5 w-5 text-[#F15A24]" />
-              </div>
-            </div>
-
-            <Textarea
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="Ex.: A PC ficou parada por duas horas porque deu problema na bomba de combustível."
-              className="min-h-[145px] resize-y border-[#0B3047]/20 bg-[#F5F1E9]/55 text-base leading-7 text-[#0B3047] placeholder:text-[#697278]/70 focus-visible:ring-[#0B3047]"
-            />
-
-            {(images.length > 0 || audio) && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {images.map((image, index) => (
-                  <div key={`${image.name}-${index}`} className="relative overflow-hidden rounded-sm border border-[#0B3047]/15">
-                    <img src={image.dataUrl} alt={image.name} className="h-16 w-16 object-cover" />
-                    <button
-                      type="button"
-                      className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-[#B34A43]"
-                      onClick={() => setImages((current) => current.filter((_, imageIndex) => imageIndex !== index))}
-                      aria-label="Remover foto"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-                {audio && (
-                  <div className="flex items-center gap-2 rounded-sm border border-[#0B3047]/15 bg-[#F5F1E9] px-3 text-sm text-[#0B3047]">
-                    <Mic className="h-4 w-4 text-[#F15A24]" />
-                    <span className="max-w-[180px] truncate">{audio.name}</span>
-                    <button type="button" onClick={() => setAudio(null)} className="text-[#B34A43]" aria-label="Remover áudio">×</button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-[#0B3047]/15 bg-white px-3 py-2 text-sm font-medium text-[#0B3047] hover:bg-[#F5F1E9]">
-                <Camera className="h-4 w-4" /> Foto
-                <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(event) => { void addImages(event.target.files); event.currentTarget.value = ""; }} />
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-[#0B3047]/15 bg-white px-3 py-2 text-sm font-medium text-[#0B3047] hover:bg-[#F5F1E9]">
-                <ImagePlus className="h-4 w-4" /> Galeria
-                <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => { void addImages(event.target.files); event.currentTarget.value = ""; }} />
-              </label>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={recording ? stopRecording : startRecording}
-                className={recording ? "border-[#F15A24] text-[#F15A24]" : "border-[#0B3047]/15 text-[#0B3047]"}
-              >
-                {recording ? <Square className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-                {recording ? "Parar" : "Áudio"}
-              </Button>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                onClick={organize}
-                disabled={organizing || !text.trim()}
-                className="h-12 flex-1 bg-[#0B3047] text-white hover:bg-[#0B3047]/90"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                {organizing ? "Organizando..." : "Organizar informação"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={sendForOrganization}
-                disabled={organizing}
-                className="h-12 border-[#F15A24] text-[#F15A24] hover:bg-[#F15A24]/10"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {candidates.length ? "Guardar teste" : "Enviar"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {candidates.length > 0 && (
-          <Card className="border-[#0B3047]/15 bg-white shadow-[6px_6px_0_rgba(11,48,71,0.07)]">
-            <CardContent className="p-5 sm:p-7">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-[#F15A24]" />
-                    <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-[#697278]">Organização sugerida</p>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[#697278]">
-                    {candidateSource === "ia" ? "A IA encontrou estes registros. Revise antes de confirmar." : "Modo local: o motor estruturou a mensagem para você testar o comportamento."}
-                  </p>
-                </div>
-                <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[#697278]">
-                  {candidateSource === "ia" ? "IA" : "MODO LOCAL"}
-                </span>
-              </div>
-
-              <div className="mt-5 space-y-4">
-                {candidates.map((candidate, candidateIndex) => (
-                  <div key={`${candidate.type}-${candidateIndex}`} className="border border-[#0B3047]/15 bg-[#F5F1E9]/30 p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className={`px-3 py-1 text-sm font-semibold ${typeTone[candidate.type]}`}>{typeLabel[candidate.type]}</span>
-                      <span className="font-mono text-xs text-[#697278]">{confidenceLabel(candidate.confidence)}</span>
-                    </div>
-                    <h3 className="mt-4 text-xl font-semibold text-[#0B3047]">{candidate.title}</h3>
-                    <p className="mt-2 text-base leading-7 text-[#697278]">{candidate.summary}</p>
-
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {Object.entries(candidate.fields).map(([key, value]) => (
-                        <label key={key} className="block rounded-sm bg-white px-3 py-2">
-                          <span className="font-mono text-[11px] text-[#697278]">{key}</span>
-                          <input
-                            value={value}
-                            onChange={(event) => updateCandidateField(candidateIndex, key, event.target.value)}
-                            className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-[#0B3047] outline-none"
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-                <Button type="button" onClick={confirmOrganization} className="h-11 flex-1 bg-[#0B3047] text-white hover:bg-[#0B3047]/90">
-                  <Check className="mr-2 h-4 w-4" /> Confirmar organização
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setEditing(!editing)} className="h-11 border-[#0B3047]/20 text-[#0B3047]">
-                  <Pencil className="mr-2 h-4 w-4" /> {editing ? "Concluir revisão" : "Revisar campos"}
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => { setCandidates([]); setCandidateSource(null); }} className="h-11 text-[#697278]">
-                  <RotateCcw className="mr-2 h-4 w-4" /> Limpar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <section>
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-[#697278]">Histórico do laboratório</p>
-              <h2 className="mt-1 font-serif text-3xl text-[#0B3047]">Testes recentes</h2>
-            </div>
-            <span className="font-mono text-xs text-[#697278]">{entries.length} registro{entries.length !== 1 ? "s" : ""}</span>
-          </div>
-
-          <div className="space-y-3">
-            {entries.length === 0 ? (
-              <Card className="border-dashed border-[#0B3047]/20 bg-transparent shadow-none">
-                <CardContent className="p-7 text-center text-sm text-[#697278]">
-                  Ainda não há testes. Comece com uma situação real da obra.
-                </CardContent>
-              </Card>
-            ) : entries.map((entry) => (
-              <Card key={entry.id} className="border-[#0B3047]/15 bg-white shadow-[4px_4px_0_rgba(11,48,71,0.05)]">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#697278]">
-                      <Clock className="h-4 w-4" />
-                      {formatDate(entry.createdAt)}
-                      <span>·</span>
-                      <span className={entry.status === "organizado" ? "text-[#6F8E3E]" : "text-[#F15A24]"}>
-                        {entry.status === "organizado" ? "ORGANIZADO" : "PENDENTE"}
-                      </span>
-                    </div>
-                    <button type="button" onClick={() => deleteEntry(entry.id)} className="text-[#B34A43]" aria-label="Excluir teste">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {entry.text && <p className="mt-4 whitespace-pre-wrap text-base leading-7 text-[#0B3047]">{entry.text}</p>}
-                  {entry.audioName && <p className="mt-3 font-mono text-xs text-[#697278]">🎙 ÁUDIO · {entry.audioName}</p>}
-                  {entry.images.length > 0 && <p className="mt-2 font-mono text-xs text-[#697278]">📷 {entry.images.length} foto{entry.images.length > 1 ? "s" : ""}</p>}
-                  {entry.candidates?.length ? (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {entry.candidates.map((candidate, index) => (
-                        <span key={`${candidate.type}-${index}`} className="rounded-sm bg-[#F5F1E9] px-2 py-1 font-mono text-[11px] text-[#0B3047]">
-                          {typeLabel[candidate.type]}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  <Button type="button" variant="ghost" onClick={() => reviseEntry(entry)} className="mt-3 px-0 text-[#0B3047] hover:bg-transparent hover:text-[#F15A24]">
-                    Revisar este teste
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        <p className="pb-8 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-[#697278]">
-          Fase MVP · interpretação e revisão · sem gravação na gestão
-        </p>
+    <Card className="rounded-[1.1rem] border border-brand bg-white shadow-[5px_5px_0_#d7d0c4]"><CardContent className="p-5 sm:p-7">
+      <Textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Escreva o que aconteceu na obra... Ex.: Recebemos quatro cargas de brita, executamos 150 m e a PC trabalhou junto com o sapinho." className="min-h-[170px] border-brand/20 bg-[#F5F1E9]/50 text-sm leading-6" />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-brand/15 bg-[#F5F1E9] px-4 py-2.5 text-xs font-bold text-brand-navy"><ImagePlus className="h-4 w-4" /> Foto<input type="file" accept="image/*" multiple className="hidden" onChange={(event) => { void addImages(event.target.files); event.currentTarget.value = ""; }} /></label>
+        {recording ? <Button onClick={stopRecording} className="bg-[#B34A43] text-white"><Square className="mr-2 h-4 w-4" />Parar áudio</Button> : <Button variant="outline" onClick={() => void startRecording()}><Mic className="mr-2 h-4 w-4" />Áudio</Button>}
+        <Button variant="outline" onClick={reset}><RotateCcw className="mr-2 h-4 w-4" />Limpar</Button>
+        <Button onClick={() => void organize()} disabled={organizing || !text.trim()} className="ml-auto bg-brand-navy text-white hover:bg-[#123d57]"><Sparkles className="mr-2 h-4 w-4" />{organizing ? "Organizando..." : "Organizar informação"}</Button>
       </div>
-    </div>
-  );
+      {(audio || images.length > 0) && <div className="mt-4 flex flex-wrap gap-2 text-xs text-[#737a7b]">{audio && <span className="rounded-full bg-[#F5F1E9] px-3 py-1">🎙 {audio.name}</span>}{images.map((image) => <span key={image.name + image.dataUrl.slice(-10)} className="rounded-full bg-[#F5F1E9] px-3 py-1">📷 {image.name}</span>)}</div>}
+    </CardContent></Card>
+
+    {candidates.length > 0 && <Card className="mt-5 rounded-[1.1rem] border border-brand bg-white shadow-[5px_5px_0_#d7d0c4]"><CardContent className="p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#737a7b]">{source === "ia" ? "IA" : "Motor local"} · proposta</p><h2 className="mt-1 font-display text-3xl font-semibold text-brand-navy">Evento identificado</h2><p className="mt-1 text-xs text-[#737a7b]">A confirmação abaixo é o ponto em que a informação entra na memória operacional.</p></div><Button variant="outline" onClick={() => setEditing(!editing)}><Pencil className="mr-2 h-4 w-4" />{editing ? "Concluir edição" : "Editar"}</Button></div>
+      <div className="mt-5 space-y-3">{candidates.map((candidate, index) => <div key={`${candidate.type}-${index}`} className="rounded-lg border border-black/10 bg-[#F5F1E9]/50 p-4"><div className="flex items-center gap-2"><span className="rounded-full bg-brand-navy px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">{typeLabel[candidate.type]}</span><span className="text-[10px] text-[#737a7b]">{Math.round(candidate.confidence * 100)}% confiança</span></div><h3 className="mt-2 text-sm font-bold text-brand-navy">{candidate.title}</h3><p className="mt-1 text-xs leading-5 text-[#737a7b]">{candidate.summary}</p>{editing && Object.entries(candidate.fields).map(([key, value]) => <label key={key} className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-[#737a7b]">{key}<input className="mt-1 h-9 w-full rounded-md border border-brand/15 bg-white px-3 text-xs" value={String(value ?? "")} onChange={(event) => updateCandidate(index, key, event.target.value)} /></label>)}</div>)}</div>
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => { setCandidates([]); setEditing(false); }}>Descartar proposta</Button><Button onClick={confirm} className="bg-[#6F8E3E] text-white hover:bg-[#5f7b35]"><Check className="mr-2 h-4 w-4" />Confirmar e registrar evento</Button></div>
+    </CardContent></Card>}
+
+    <section className="mt-8"><div className="mb-3 flex items-end justify-between"><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#737a7b]">Memória de campo</p><h2 className="mt-1 font-display text-3xl font-semibold text-brand-navy">Entradas recentes</h2></div><span className="text-xs text-[#737a7b]">{entries.length} registro(s)</span></div>{entries.length ? <div className="space-y-3">{entries.slice(0, 10).map((entry) => <Card key={entry.id} className="border-brand bg-white"><CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap gap-2 text-[10px] text-[#737a7b]"><span>{formatDate(entry.createdAt)}</span><span>·</span><span>{entry.source === "ia" ? "IA" : "local"}</span><span>·</span><span>{entry.candidates.length} candidato(s)</span></div><p className="mt-2 line-clamp-3 text-sm leading-6 text-brand-navy">{entry.text || "Entrada baseada em evidência sem texto"}</p></div><div className="flex shrink-0 gap-2"><Button variant="outline" size="sm" onClick={() => revise(entry)}><Pencil className="mr-1 h-3.5 w-3.5" />Revisar</Button><Button variant="ghost" size="sm" onClick={() => remove(entry.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div></CardContent></Card>)}</div> : <Card className="border-brand bg-white"><CardContent className="p-7 text-center text-sm text-[#737a7b]">Ainda não há entradas de campo. Registre uma situação real para começar a construir a memória da obra.</CardContent></Card>}</section>
+  </div></main>;
 }
