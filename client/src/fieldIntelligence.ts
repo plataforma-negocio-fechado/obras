@@ -36,9 +36,8 @@ function short(text: string, max = 120) {
 
 /**
  * Primeira camada de inteligência do Campo.
- * Não grava nada: transforma a mensagem em sugestões estruturadas para revisão.
- * O contrato é compartilhado com a camada de IA, permitindo trocar o motor sem
- * alterar a interface.
+ * Transforma linguagem livre em candidatos estruturados para revisão.
+ * Não grava nada por conta própria: a confirmação é a fronteira entre sugestão e dado.
  */
 export function suggestFieldRecords(text: string): FieldCandidate[] {
   const clean = text.trim();
@@ -50,16 +49,15 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
 
   const machine = extractMachine(clean, n);
   const hasProblem = /problema|travou|parad[ao]|atraso|nao veio|nao chegou|nao bate|diverg|erro|pendencia|faltando|aguardando|imped|estourou|quebrou|defeito/.test(n);
-  const hasMachineEvent = machine && /parad[ao]|rodou|chegou|abastec|horas?|quebrou|estourou|defeito|problema|manutenc|funcion/.test(n);
-  const hasFuelCost = value && /abastec|combustivel|gasolina|diesel|posto/.test(n);
+  const hasFuelCost = Boolean(value && /abastec|combustivel|gasolina|diesel|posto/.test(n));
 
-  // Custo: só criar quando existe evidência de uma despesa, preferencialmente valor.
+  // Custo: uma despesa explícita deve virar custo.
   if (hasFuelCost) {
     candidates.push({
       type: "custo",
-      title: "Abastecimento",
+      title: machine ? `Abastecimento da ${machine}` : "Abastecimento",
       summary: [machine, value].filter(Boolean).join(" · ") || "Despesa de combustível identificada",
-      confidence: value ? 0.96 : 0.82,
+      confidence: value ? 0.98 : 0.84,
       fields: {
         categoria: "combustível",
         ...(machine ? { equipamento: machine } : {}),
@@ -105,18 +103,18 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // Máquina: extrair evento, duração e motivo em vez de guardar apenas observação.
+  // Máquina: não duplicar um simples abastecimento como evento de máquina.
+  // Se houver parada, falha, manutenção, chegada ou uso explícito, aí sim é um evento.
+  const hasMachineEvent = Boolean(machine && /parad[ao]|rodou|chegou|horas?|quebrou|estourou|defeito|problema|manutenc|funcion/.test(n));
   if (hasMachineEvent) {
     const duration = n.match(/(?:por|de|durante)\s+(\d+(?:[,.]\d+)?)\s*(hora|horas|minuto|minutos)/i)?.[0];
     const event = /parad[ao]|nao rodou|não rodou/.test(n)
       ? "parada"
-      : /abastec/.test(n)
-        ? "abastecimento"
-        : /chegou/.test(n)
-          ? "chegada"
-          : /quebrou|estourou|defeito|problema|manutenc/.test(n)
-            ? "falha/manutenção"
-            : "evento de máquina";
+      : /chegou/.test(n)
+        ? "chegada"
+        : /quebrou|estourou|defeito|problema|manutenc/.test(n)
+          ? "falha/manutenção"
+          : "uso de máquina";
     const reasonMatch = clean.match(/(?:porque|pq|por causa de|devido a)\s+(.+?)(?:\.|$)/i);
     const reason = reasonMatch?.[1]?.trim();
 
@@ -134,7 +132,7 @@ export function suggestFieldRecords(text: string): FieldCandidate[] {
     });
   }
 
-  // Ocorrência: problemas de execução devem virar ocorrência, mesmo quando há diário implícito.
+  // Ocorrência: problemas de execução devem virar ocorrência.
   if (hasProblem) {
     const impact = /parad[ao]|nao rodou|não rodou/.test(n) ? "serviço/máquina parado" : undefined;
     candidates.push({
