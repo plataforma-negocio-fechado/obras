@@ -29,7 +29,10 @@ import { usePilotLocation } from "@/pilotRouting";
 function ProfileEditorActions() {
   const publicUrl = `${window.location.origin}${window.location.pathname}#/perfil/diego-silva`;
   const share = async () => {
-    if (navigator.share) { await navigator.share({ title: "Meu perfil profissional · Negócio Fechado", url: publicUrl }); return; }
+    if (navigator.share) {
+      await navigator.share({ title: "Meu perfil profissional · Negócio Fechado", url: publicUrl });
+      return;
+    }
     await navigator.clipboard?.writeText(publicUrl);
     window.alert("Link público copiado.");
   };
@@ -38,13 +41,15 @@ function ProfileEditorActions() {
 
 function AppRouter() {
   const [path] = usePilotLocation();
-  if (path === "/") return <ProfilePage />;
-  if (path === "/acesso") return <AccessPage />;
+
+  // O aplicativo começa pelo Acesso Central. O perfil público continua disponível em /perfil.
+  if (path === "/" || path === "/acesso") return <AccessPage />;
   if (path === "/obras") return <StartPage />;
   if (path === "/campo") return <FieldPage />;
   if (path === "/meu-perfil") return <><ProfileEditPage /><ProfileEditorActions /></>;
   if (path === "/perfil/editar") return <><ProfileEditPage /><ProfileEditorActions /></>;
   if (path === "/perfil" || path === "/perfil/diego-silva") return <ProfilePage />;
+
   const content =
     path === "/hoje" ? <Home /> :
     path === "/diario" ? <DiaryPage /> :
@@ -63,6 +68,7 @@ function AppRouter() {
     path === "/preferencias" ? <PreferencesPage /> :
     path === "/configuracao-registros" ? <RecordSettingsPage /> :
     <NotFound />;
+
   return <DashboardLayout>{content}</DashboardLayout>;
 }
 
