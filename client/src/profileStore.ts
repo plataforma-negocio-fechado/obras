@@ -31,6 +31,8 @@ export type ProfessionalProfile = {
   experience: ProfileExperience[];
 };
 
+const PUBLIC_AVATAR_URL = `${import.meta.env.BASE_URL}images/diego-avatar.webp`;
+
 export const defaultProfile: ProfessionalProfile = {
   name: "Diego Silva",
   title: "Engenheiro Civil",
@@ -42,6 +44,7 @@ export const defaultProfile: ProfessionalProfile = {
   email: "engenharia.diegosilva@gmail.com",
   crea: "CREA-PB nº 162015408-0",
   linkedin: "https://www.linkedin.com/in/diego-silva-gomes-93955a381",
+  avatarUrl: PUBLIC_AVATAR_URL,
   skills: ["Gestão e planejamento de obras", "Licitações públicas", "Engenharia de custos e orçamento", "Loteamentos", "Terraplanagem e drenagem", "Projetos estruturais", "Compatibilização de projetos", "Pavimentação"],
   highlights: [
     { value: "30", label: "licitações vitoriosas" },
