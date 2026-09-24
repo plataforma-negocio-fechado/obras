@@ -24,6 +24,7 @@ import FieldPage from "@/pages/FieldPage";
 import ProfilePage from "@/pages/ProfilePage";
 import ProfileEditPage from "@/pages/ProfileEditPage";
 import AccessPage from "@/pages/AccessPage";
+import DemoProfessionalProfilePage from "@/pages/DemoProfessionalProfilePage";
 import { usePilotLocation } from "@/pilotRouting";
 
 function ProfileEditorActions() {
@@ -49,6 +50,7 @@ function AppRouter() {
   if (path === "/meu-perfil") return <><ProfileEditPage /><ProfileEditorActions /></>;
   if (path === "/perfil/editar") return <><ProfileEditPage /><ProfileEditorActions /></>;
   if (path === "/perfil" || path === "/perfil/diego-silva") return <ProfilePage />;
+  if (path === "/perfil/joao-pereira") return <DemoProfessionalProfilePage />;
 
   const content =
     path === "/hoje" ? <Home /> :
