@@ -90,7 +90,7 @@ export default function FieldPage() {
     if (text.trim()) evidence.push({ id: makeId("evidence"), type: "texto", name: "Relato original", dataUrl: undefined });
     if (audio) evidence.push({ id: makeId("evidence"), type: "audio", name: audio.name, dataUrl: audio.dataUrl });
     images.forEach((image) => evidence.push({ id: makeId("evidence"), type: "foto", name: image.name, dataUrl: image.dataUrl }));
-    const memoryType = primary?.type === "maquina" ? "máquina" : primary?.type === "producao" ? "produção" : primary?.type ?? "diário";
+    const memoryType = primary?.type === "maquina" ? "máquina" : primary?.type === "producao" ? "produção" : primary?.type === "ocorrencia" ? "ocorrência" : primary?.type === "acao" ? "ação" : primary?.type === "diario" ? "diário" : primary?.type ?? "diário";
     addMemoryEvent({ type: memoryType, title, summary, source: "campo", confirmed: true, evidence, metadata: primary?.fields as Record<string, string | number | undefined> | undefined });
     setEntries((current) => [{ id: makeId("field"), createdAt: new Date().toISOString(), text: text.trim(), audio: audio ?? undefined, images, candidates, source: source ?? "local" }, ...current]);
     toast.success("Evento confirmado e incorporado à memória da obra");
