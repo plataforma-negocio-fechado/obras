@@ -1,48 +1,23 @@
-export type ProfileProject = {
-  title: string;
-  location: string;
-  role: string;
-  result?: string;
-  images?: string[];
-};
+import type { ProfessionalProfile } from "@/data/professionalProfiles";
 
-export type ProfileExperience = {
-  period: string;
-  company: string;
-  role: string;
-  bullets: string[];
-};
-
-export type ProfessionalProfile = {
-  name: string;
-  title: string;
-  location: string;
-  headline: string;
-  summary: string;
-  phone: string;
-  email: string;
-  crea: string;
-  linkedin?: string;
-  avatarUrl?: string;
-  coverImageUrl?: string;
-  skills: string[];
-  highlights: { value: string; label: string }[];
-  projects: ProfileProject[];
-  experience: ProfileExperience[];
-};
+export type { ProfessionalProfile };
+export type ProfileProject = ProfessionalProfile["projects"][number];
+export type ProfileExperience = ProfessionalProfile["experience"][number];
 
 const PUBLIC_AVATAR_URL = `${import.meta.env.BASE_URL}images/diego-avatar.webp`;
 
 export const defaultProfile: ProfessionalProfile = {
+  slug: "diego-silva",
   name: "Diego Silva",
+  initials: "DS",
   title: "Engenheiro Civil",
   location: "Patos/PB",
+  registration: "CREA-PB nº 162015408-0",
   headline: "Gestão de Obras • Loteamentos • Licitações",
   summary:
     "Engenheiro Civil graduado pela UFCG e especialista em Gerenciamento de Construções (Construction Management) pela Columbia University (New York). Atua em engenharia de custos, orçamentação, análise de editais, planejamento e projetos de obras urbanas e de infraestrutura.",
   phone: "(83) 99608-8942",
   email: "engenharia.diegosilva@gmail.com",
-  crea: "CREA-PB nº 162015408-0",
   linkedin: "https://www.linkedin.com/in/diego-silva-gomes-93955a381",
   avatarUrl: PUBLIC_AVATAR_URL,
   skills: ["Gestão e planejamento de obras", "Licitações públicas", "Engenharia de custos e orçamento", "Loteamentos", "Terraplanagem e drenagem", "Projetos estruturais", "Compatibilização de projetos", "Pavimentação"],
@@ -76,7 +51,11 @@ export function loadProfile(): ProfessionalProfile {
     return {
       ...defaultProfile,
       ...parsed,
+      slug: "diego-silva",
       projects: (parsed.projects ?? defaultProfile.projects).map((project) => ({ ...project, images: project.images ?? [] })),
+      experience: parsed.experience ?? defaultProfile.experience,
+      highlights: parsed.highlights ?? defaultProfile.highlights,
+      skills: parsed.skills ?? defaultProfile.skills,
     };
   } catch {
     return defaultProfile;
