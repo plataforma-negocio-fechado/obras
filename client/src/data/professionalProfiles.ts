@@ -2,7 +2,20 @@ export type ProfessionalProject = {
   title: string;
   location: string;
   role: string;
-  result: string;
+  result?: string;
+  images?: string[];
+};
+
+export type ProfessionalExperience = {
+  period: string;
+  company: string;
+  role: string;
+  bullets: string[];
+};
+
+export type ProfessionalHighlight = {
+  value: string;
+  label: string;
 };
 
 export type ProfessionalProfile = {
@@ -17,8 +30,12 @@ export type ProfessionalProfile = {
   phone: string;
   email: string;
   linkedin?: string;
+  avatarUrl?: string;
+  coverImageUrl?: string;
   skills: string[];
+  highlights: ProfessionalHighlight[];
   projects: ProfessionalProject[];
+  experience: ProfessionalExperience[];
 };
 
 export const professionalProfiles: Record<string, ProfessionalProfile> = {
@@ -33,15 +50,18 @@ export const professionalProfiles: Record<string, ProfessionalProfile> = {
     summary: "Perfil fictício criado exclusivamente para validar a experiência de entrega do Perfil Negócio Fechado a um segundo profissional. Os dados, projetos e contatos abaixo são demonstrativos.",
     phone: "(83) 99999-0000",
     email: "joao.pereira@example.com",
+    linkedin: "",
     skills: ["Planejamento de obras", "Orçamento", "Gestão de equipes", "Revit / BIM", "AutoCAD", "Medições"],
+    highlights: [],
     projects: [
-      { title: "Residencial Atlântico", location: "João Pessoa/PB", role: "Acompanhamento executivo, planejamento semanal e medições.", result: "Projeto demonstrativo" },
-      { title: "Reforma Comercial Centro", location: "João Pessoa/PB", role: "Orçamento, compatibilização e acompanhamento da execução.", result: "Projeto demonstrativo" },
-      { title: "Residência Unifamiliar", location: "Cabedelo/PB", role: "Planejamento, orçamento e acompanhamento técnico.", result: "Projeto demonstrativo" },
+      { title: "Residencial Atlântico", location: "João Pessoa/PB", role: "Acompanhamento executivo, planejamento semanal e medições.", result: "Projeto demonstrativo", images: [] },
+      { title: "Reforma Comercial Centro", location: "João Pessoa/PB", role: "Orçamento, compatibilização e acompanhamento da execução.", result: "Projeto demonstrativo", images: [] },
+      { title: "Residência Unifamiliar", location: "Cabedelo/PB", role: "Planejamento, orçamento e acompanhamento técnico.", result: "Projeto demonstrativo", images: [] },
     ],
+    experience: [],
   },
 };
 
-export function getProfessionalProfile(slug: string) {
+export function getProfessionalProfile(slug: string): ProfessionalProfile | undefined {
   return professionalProfiles[slug];
 }
